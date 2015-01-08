@@ -1,0 +1,10 @@
+{
+  "name" : "/INTEL/NDG/dummyserver",
+  "type" : {
+    "name": "mqtt",
+    "protocol" : "tcp"
+  },
+  "port" : 9889,
+  "properties" : {"dataType": "float"},
+  "type_params": {"ssl": false}
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaving One-time Setup</title>
+    <link rel="stylesheet" type="text/css" href="main.css" media="screen"/>
+</head>
+<body>
+<h1>Leaving One-time Setup</h1>
+
+<div class='section'>
+    <div class="content" style="padding: 30px">
+        Please wait while the device connects to 'params_ssid'. After about a minute, connect <i>this</i> machine to
+        '<b>params_ssid</b>' and visit <a href="http://params_hostname"><b>http://params_hostname</b></a> in your
+        browser.
+        <br><br>
+        If you are <i>unable to connect</i> to your device, you can try this setup again by following the steps below:
+
+        <ol>
+            <li>Press the 'PWR' button for more than 2 seconds (NOTE: Pressing 'PWR' for more than 7 seconds will
+                switch off power to the board)</li>
+            <li>Reconnect this machine to the 'params_ap' network</li>
+            <li>Visit '<b><a href="http://params_hostname">http://params_hostname</a></b>' in your browser</li>
+        </ol>
+
+        Alternatively, you can connect to the device via its serial port and run <code>configure_edison --wifi</code>
+        on the command line. To learn about other configuration options, run <code>configure_edison --help</code>.
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,568 @@
+From b8495793e6568afd38844657ff0cede5db4ef548 Mon Sep 17 00:00:00 2001
+From: Fabien Chereau <fabien.chereau@intel.com>
+Date: Wed, 11 Jun 2014 10:11:38 +0200
+Subject: [PATCH] Squashed all commits from upstream to Edison
+
+Change-Id: I5b401569fe1555722ee59c03906e27b1a0e52c85
+---
+ src/drivers/driver.h            |   4 +-
+ src/drivers/driver_nl80211.c    |  17 ++--
+ src/drivers/driver_priv_i.h     | 147 +++++++++++++++++++++++++++++++++
+ src/drivers/drivers.mak         |   5 ++
+ vendor_lib/driver_cmd_nl80211.c | 176 ++++++++++++++++++++++++++++++++++++++++
+ wpa_supplicant/ctrl_iface.c     |  14 ++--
+ wpa_supplicant/driver_i.h       |   4 +-
+ wpa_supplicant/wpa_cli.c        |   8 +-
+ 8 files changed, 356 insertions(+), 19 deletions(-)
+ create mode 100644 src/drivers/driver_priv_i.h
+ create mode 100755 vendor_lib/driver_cmd_nl80211.c
+
+diff --git a/src/drivers/driver.h b/src/drivers/driver.h
+index 7ad8576..92521da 100644
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -2479,7 +2479,7 @@ struct wpa_driver_ops {
+ 	 */
+ 	int (*set_authmode)(void *priv, int authmode);
+ 
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ 	/**
+ 	 * driver_cmd - Execute driver-specific command
+ 	 * @priv: Private driver interface data
+@@ -2489,7 +2489,7 @@ struct wpa_driver_ops {
+ 	 * Returns: 0 on success, -1 on failure
+ 	 */
+ 	int (*driver_cmd)(void *priv, char *cmd, char *buf, size_t buf_len);
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CM */
+ 
+ 	/**
+ 	 * set_rekey_info - Set rekey information
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index 5323e99..492064b 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -191,6 +191,9 @@ static void nl80211_destroy_eloop_handle(struct nl_handle **handle)
+ #define IF_OPER_UP 6
+ #endif
+ 
++static void nl80211_global_deinit(void *priv);
++
++#if !defined(EDISON_USE_PRIVATE_BCM_CMD)
+ struct nl80211_global {
+ 	struct dl_list interfaces;
+ 	int if_add_ifindex;
+@@ -216,7 +219,7 @@ struct nl80211_wiphy_data {
+ 	int wiphy_idx;
+ };
+ 
+-static void nl80211_global_deinit(void *priv);
++
+ 
+ struct i802_bss {
+ 	struct wpa_driver_nl80211_data *drv;
+@@ -334,7 +337,9 @@ struct wpa_driver_nl80211_data {
+ 	int auth_local_state_change;
+ 	int auth_p2p;
+ };
+-
++#else
++#include "driver_priv_i.h"
++#endif
+ 
+ static void wpa_driver_nl80211_deinit(struct i802_bss *bss);
+ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
+@@ -362,9 +367,11 @@ static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
+ static int android_pno_start(struct i802_bss *bss,
+ 			     struct wpa_driver_scan_params *params);
+ static int android_pno_stop(struct i802_bss *bss);
++#endif /* ANDROID */
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ extern int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+ 					 size_t buf_len);
+-#endif /* ANDROID */
++#endif /*EDISON_USE_PRIVATE_BCM_CMD */
+ #ifdef ANDROID_P2P
+ int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration);
+ int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len);
+@@ -11766,8 +11773,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
+ 	.get_noa = wpa_driver_get_p2p_noa,
+ 	.set_ap_wps_ie = wpa_driver_set_ap_wps_p2p_ie,
+ #endif /* ANDROID_P2P */
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ 	.driver_cmd = wpa_driver_nl80211_driver_cmd,
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 	.set_qos_map = nl80211_set_qos_map,
+ };
+diff --git a/src/drivers/driver_priv_i.h b/src/drivers/driver_priv_i.h
+new file mode 100644
+index 0000000..9c810db
+--- /dev/null
++++ b/src/drivers/driver_priv_i.h
+@@ -0,0 +1,147 @@
++/*
++ * Driver interaction with Linux nl80211/cfg80211
++ */
++
++
++struct nl80211_global {
++	struct dl_list interfaces;
++	int if_add_ifindex;
++	u64 if_add_wdevid;
++	int if_add_wdevid_set;
++	struct netlink_data *netlink;
++	struct nl_cb *nl_cb;
++	struct nl_handle *nl;
++	int nl80211_id;
++	int ioctl_sock; /* socket for ioctl() use */
++
++	struct nl_handle *nl_event;
++};
++
++struct nl80211_wiphy_data {
++	struct dl_list list;
++	struct dl_list bsss;
++	struct dl_list drvs;
++
++	struct nl_handle *nl_beacons;
++	struct nl_cb *nl_cb;
++
++	int wiphy_idx;
++};
++
++
++struct i802_bss {
++	struct wpa_driver_nl80211_data *drv;
++	struct i802_bss *next;
++	int ifindex;
++	u64 wdev_id;
++	char ifname[IFNAMSIZ + 1];
++	char brname[IFNAMSIZ];
++	unsigned int beacon_set:1;
++	unsigned int added_if_into_bridge:1;
++	unsigned int added_bridge:1;
++	unsigned int in_deinit:1;
++	unsigned int wdev_id_set:1;
++	unsigned int added_if:1;
++
++	u8 addr[ETH_ALEN];
++
++	int freq;
++	int if_dynamic;
++
++	void *ctx;
++	struct nl_handle *nl_preq, *nl_mgmt;
++	struct nl_cb *nl_cb;
++
++	struct nl80211_wiphy_data *wiphy_data;
++	struct dl_list wiphy_list;
++};
++
++struct wpa_driver_nl80211_data {
++	struct nl80211_global *global;
++	struct dl_list list;
++	struct dl_list wiphy_list;
++	char phyname[32];
++	void *ctx;
++	int ifindex;
++	int if_removed;
++	int if_disabled;
++	int ignore_if_down_event;
++	struct rfkill_data *rfkill;
++	struct wpa_driver_capa capa;
++	u8 *extended_capa, *extended_capa_mask;
++	unsigned int extended_capa_len;
++	int has_capability;
++
++	int operstate;
++
++	int scan_complete_events;
++	enum scan_states {
++		NO_SCAN, SCAN_REQUESTED, SCAN_STARTED, SCAN_COMPLETED,
++		SCAN_ABORTED, SCHED_SCAN_STARTED, SCHED_SCAN_STOPPED,
++		SCHED_SCAN_RESULTS
++	} scan_state;
++
++	struct nl_cb *nl_cb;
++
++	u8 auth_bssid[ETH_ALEN];
++	u8 auth_attempt_bssid[ETH_ALEN];
++	u8 bssid[ETH_ALEN];
++	u8 prev_bssid[ETH_ALEN];
++	int associated;
++	u8 ssid[32];
++	size_t ssid_len;
++	enum nl80211_iftype nlmode;
++	enum nl80211_iftype ap_scan_as_station;
++	unsigned int assoc_freq;
++
++	int monitor_sock;
++	int monitor_ifidx;
++	int monitor_refcount;
++
++	unsigned int disabled_11b_rates:1;
++	unsigned int pending_remain_on_chan:1;
++	unsigned int in_interface_list:1;
++	unsigned int device_ap_sme:1;
++	unsigned int poll_command_supported:1;
++	unsigned int data_tx_status:1;
++	unsigned int scan_for_auth:1;
++	unsigned int retry_auth:1;
++	unsigned int use_monitor:1;
++	unsigned int ignore_next_local_disconnect:1;
++	unsigned int allow_p2p_device:1;
++	unsigned int hostapd:1;
++	unsigned int start_mode_ap:1;
++	unsigned int start_iface_up:1;
++
++	u64 remain_on_chan_cookie;
++	u64 send_action_cookie;
++
++	unsigned int last_mgmt_freq;
++
++	struct wpa_driver_scan_filter *filter_ssids;
++	size_t num_filter_ssids;
++
++	struct i802_bss *first_bss;
++
++	int eapol_tx_sock;
++
++	int eapol_sock; /* socket for EAPOL frames */
++
++	int default_if_indices[16];
++	int *if_indices;
++	int num_if_indices;
++
++	/* From failed authentication command */
++	int auth_freq;
++	u8 auth_bssid_[ETH_ALEN];
++	u8 auth_ssid[32];
++	size_t auth_ssid_len;
++	int auth_alg;
++	u8 *auth_ie;
++	size_t auth_ie_len;
++	u8 auth_wep_key[4][16];
++	size_t auth_wep_key_len[4];
++	int auth_wep_tx_keyidx;
++	int auth_local_state_change;
++	int auth_p2p;
++};
+diff --git a/src/drivers/drivers.mak b/src/drivers/drivers.mak
+index 68ff910..383e1b6 100644
+--- a/src/drivers/drivers.mak
++++ b/src/drivers/drivers.mak
+@@ -27,6 +27,11 @@ NEED_NETLINK=y
+ NEED_LINUX_IOCTL=y
+ NEED_RFKILL=y
+ 
++ifdef CONFIG_USE_VENDOR_PRIVATE_CMD
++  DRV_OBJS += ../vendor_lib/driver_cmd_nl80211.o
++  DRV_CFLAGS += -I../src/drivers -I../wpa_supplicant
++endif
++
+ ifdef CONFIG_LIBNL32
+   DRV_LIBS += -lnl-3
+   DRV_LIBS += -lnl-genl-3
+diff --git a/vendor_lib/driver_cmd_nl80211.c b/vendor_lib/driver_cmd_nl80211.c
+new file mode 100755
+index 0000000..36ed1e9
+--- /dev/null
++++ b/vendor_lib/driver_cmd_nl80211.c
+@@ -0,0 +1,176 @@
++/*
++ * Driver interaction with extended Linux CFG8021
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * Alternatively, this software may be distributed under the terms of BSD
++ * license.
++ *
++ */
++
++#include "includes.h"
++#include <sys/ioctl.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <net/if.h>
++#include <netlink/genl/genl.h>
++#include <netlink/genl/family.h>
++#include <netlink/genl/ctrl.h>
++#include <linux/rtnetlink.h>
++#include <netpacket/packet.h>
++#include <linux/filter.h>
++#include <linux/errqueue.h>
++#include "nl80211_copy.h"
++
++#include "common.h"
++#include "eloop.h"
++#include "utils/list.h"
++#include "common/qca-vendor.h"
++#include "common/ieee802_11_defs.h"
++#include "common/ieee802_11_common.h"
++#include "l2_packet/l2_packet.h"
++#include "netlink.h"
++#include "linux_ioctl.h"
++#include "radiotap.h"
++#include "radiotap_iter.h"
++#include "rfkill.h"
++#include "driver.h"
++
++
++#include "wpa_supplicant_i.h"
++#include "config.h"
++#include "driver_priv_i.h"
++
++
++#define MAX_WPSP2PIE_CMD_SIZE		512
++#define MAX_DRV_CMD_SIZE		248
++
++typedef struct android_wifi_priv_cmd {
++	char *buf;
++	int used_len;
++	int total_len;
++} android_wifi_priv_cmd;
++
++static int drv_errors = 0;
++
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
++int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
++				  size_t buf_len )
++{
++	struct i802_bss *bss = priv;
++	struct wpa_driver_nl80211_data *drv = bss->drv;
++	struct ifreq ifr;
++	android_wifi_priv_cmd priv_cmd;
++	int ret = 0;
++
++	if (!cmd)
++		return -EINVAL;
++        else { /* Use private command */
++		os_memcpy(buf, cmd, strlen(cmd) + 1);
++		memset(&ifr, 0, sizeof(ifr));
++		memset(&priv_cmd, 0, sizeof(priv_cmd));
++		os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
++
++		priv_cmd.buf = buf;
++		priv_cmd.used_len = buf_len;
++		priv_cmd.total_len = buf_len;
++                ifr.ifr_data = &priv_cmd;
++
++#ifdef DISABLE_COUNTRY_CODE_SET
++		if (os_strncasecmp(cmd, "COUNTRY", 7) == 0) {
++			wpa_printf(MSG_WARNING, "%s: setting of country code has"
++				   " been disabled\n", __func__);
++			return 0;
++		}
++#endif
++
++		if ((ret = ioctl(drv->global->ioctl_sock, SIOCDEVPRIVATE + 1, &ifr)) < 0) {
++			wpa_printf(MSG_ERROR, "%s: failed to issue private commands\n", __func__);
++		} else {
++			drv_errors = 0;
++			ret = 0;
++			if ((os_strcasecmp(cmd, "LINKSPEED") == 0) ||
++			    (os_strcasecmp(cmd, "RSSI") == 0) ||
++			    (os_strcasecmp(cmd, "GETBAND") == 0) ||
++			    (os_strncasecmp(cmd, "WLS_BATCHING", 12) == 0))
++				ret = strlen(buf);
++			else if ((os_strncasecmp(cmd, "COUNTRY", 7) == 0) ||
++				 (os_strncasecmp(cmd, "SETBAND", 7) == 0))
++				wpa_supplicant_event(drv->ctx,
++					EVENT_CHANNEL_LIST_CHANGED, NULL);
++			wpa_printf(MSG_DEBUG, "%s %s len = %d, %d", __func__, buf, ret, strlen(buf));
++		}
++	}
++	return ret;
++}
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
++
++int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration)
++{
++	char buf[MAX_DRV_CMD_SIZE];
++
++	memset(buf, 0, sizeof(buf));
++	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
++	snprintf(buf, sizeof(buf), "P2P_SET_NOA %d %d %d", count, start, duration);
++	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf)+1);
++}
++
++int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len)
++{
++	/* Return 0 till we handle p2p_presence request completely in the driver */
++	return 0;
++}
++
++int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow)
++{
++	char buf[MAX_DRV_CMD_SIZE];
++
++	memset(buf, 0, sizeof(buf));
++	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
++	snprintf(buf, sizeof(buf), "P2P_SET_PS %d %d %d", legacy_ps, opp_ps, ctwindow);
++	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf) + 1);
++}
++
++int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
++				 const struct wpabuf *proberesp,
++				 const struct wpabuf *assocresp)
++{
++	char buf[MAX_WPSP2PIE_CMD_SIZE];
++	struct wpabuf *ap_wps_p2p_ie = NULL;
++	char *_cmd = "SET_AP_WPS_P2P_IE";
++	char *pbuf;
++	int ret = 0;
++	int i;
++	struct cmd_desc {
++		int cmd;
++		const struct wpabuf *src;
++	} cmd_arr[] = {
++		{0x1, beacon},
++		{0x2, proberesp},
++		{0x4, assocresp},
++		{-1, NULL}
++	};
++
++	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
++	for (i = 0; cmd_arr[i].cmd != -1; i++) {
++		os_memset(buf, 0, sizeof(buf));
++		pbuf = buf;
++		pbuf += sprintf(pbuf, "%s %d", _cmd, cmd_arr[i].cmd);
++		*pbuf++ = '\0';
++		ap_wps_p2p_ie = cmd_arr[i].src ?
++			wpabuf_dup(cmd_arr[i].src) : NULL;
++		if (ap_wps_p2p_ie) {
++			os_memcpy(pbuf, wpabuf_head(ap_wps_p2p_ie), wpabuf_len(ap_wps_p2p_ie));
++			ret = wpa_driver_nl80211_driver_cmd(priv, buf, buf,
++				strlen(_cmd) + 3 + wpabuf_len(ap_wps_p2p_ie));
++			wpabuf_free(ap_wps_p2p_ie);
++			if (ret < 0)
++				break;
++		}
++	}
++
++	return ret;
++}
+diff --git a/wpa_supplicant/ctrl_iface.c b/wpa_supplicant/ctrl_iface.c
+index 9a3cbea..dae7738 100644
+--- a/wpa_supplicant/ctrl_iface.c
++++ b/wpa_supplicant/ctrl_iface.c
+@@ -5368,7 +5368,7 @@ static int wpa_supplicant_pktcnt_poll(struct wpa_supplicant *wpa_s, char *buf,
+ }
+ 
+ 
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ static int wpa_supplicant_driver_cmd(struct wpa_supplicant *wpa_s, char *cmd,
+ 				     char *buf, size_t buflen)
+ {
+@@ -5376,6 +5376,7 @@ static int wpa_supplicant_driver_cmd(struct wpa_supplicant *wpa_s, char *cmd,
+ 
+ 	ret = wpa_drv_driver_cmd(wpa_s, cmd, buf, buflen);
+ 	if (ret == 0) {
++#ifdef CONFIG_P2P
+ 		if (os_strncasecmp(cmd, "COUNTRY", 7) == 0) {
+ 			struct p2p_data *p2p = wpa_s->global->p2p;
+ 			if (p2p) {
+@@ -5386,11 +5387,12 @@ static int wpa_supplicant_driver_cmd(struct wpa_supplicant *wpa_s, char *cmd,
+ 				p2p_set_country(p2p, country);
+ 			}
+ 		}
++#endif /* CONFIG_P2P */
+ 		ret = os_snprintf(buf, buflen, "%s\n", "OK");
+ 	}
+ 	return ret;
+ }
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 
+ 
+ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
+@@ -6259,11 +6261,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
+ 		if (wpa_supplicant_ctrl_iface_autoscan(wpa_s, buf + 9))
+ 			reply_len = -1;
+ #endif /* CONFIG_AUTOSCAN */
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ 	} else if (os_strncmp(buf, "DRIVER ", 7) == 0) {
+ 		reply_len = wpa_supplicant_driver_cmd(wpa_s, buf + 7, reply,
+ 						      reply_size);
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 	} else if (os_strcmp(buf, "REAUTHENTICATE") == 0) {
+ 		pmksa_cache_clear_current(wpa_s->wpa);
+ 		eapol_sm_request_reauth(wpa_s->eapol);
+@@ -6512,9 +6514,9 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
+ 		NULL
+ 	};
+ 	static const char * prefix[] = {
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ 		"DRIVER ",
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 		"GET_NETWORK ",
+ 		"REMOVE_NETWORK ",
+ 		"SET ",
+diff --git a/wpa_supplicant/driver_i.h b/wpa_supplicant/driver_i.h
+index 0691b6c..5664031 100644
+--- a/wpa_supplicant/driver_i.h
++++ b/wpa_supplicant/driver_i.h
+@@ -542,7 +542,7 @@ static inline int wpa_drv_tdls_oper(struct wpa_supplicant *wpa_s,
+ 	return wpa_s->driver->tdls_oper(wpa_s->drv_priv, oper, peer);
+ }
+ 
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ static inline int wpa_drv_driver_cmd(struct wpa_supplicant *wpa_s,
+ 				     char *cmd, char *buf, size_t buf_len)
+ {
+@@ -550,7 +550,7 @@ static inline int wpa_drv_driver_cmd(struct wpa_supplicant *wpa_s,
+ 		return -1;
+ 	return wpa_s->driver->driver_cmd(wpa_s->drv_priv, cmd, buf, buf_len);
+ }
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 
+ static inline void wpa_drv_set_rekey_info(struct wpa_supplicant *wpa_s,
+ 					  const u8 *kek, const u8 *kck,
+diff --git a/wpa_supplicant/wpa_cli.c b/wpa_supplicant/wpa_cli.c
+index d66e864..2bc9ebf 100644
+--- a/wpa_supplicant/wpa_cli.c
++++ b/wpa_supplicant/wpa_cli.c
+@@ -2413,12 +2413,12 @@ static int wpa_cli_cmd_raw(struct wpa_ctrl *ctrl, int argc, char *argv[])
+ }
+ 
+ 
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ static int wpa_cli_cmd_driver(struct wpa_ctrl *ctrl, int argc, char *argv[])
+ {
+ 	return wpa_cli_cmd(ctrl, "DRIVER", 1, argc, argv);
+ }
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 
+ 
+ static int wpa_cli_cmd_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
+@@ -2896,10 +2896,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
+ 	  "<params..> = Sent unprocessed command" },
+ 	{ "flush", wpa_cli_cmd_flush, NULL, cli_cmd_flag_none,
+ 	  "= flush wpa_supplicant state" },
+-#ifdef ANDROID
++#if defined(EDISON_USE_PRIVATE_BCM_CMD)
+ 	{ "driver", wpa_cli_cmd_driver, NULL, cli_cmd_flag_none,
+ 	  "<command> = driver private commands" },
+-#endif /* ANDROID */
++#endif /* EDISON_USE_PRIVATE_BCM_CMD */
+ 	{ "radio_work", wpa_cli_cmd_radio_work, NULL, cli_cmd_flag_none,
+ 	  "= radio_work <show/add/done>" },
+ 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
+-- 
+1.8.3.2
+

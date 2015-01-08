@@ -1,0 +1,63 @@
+diff --git a/meta/recipes-devtools/gcc/gcc-4.8.inc b/meta/recipes-devtools/gcc/gcc-4.8.inc
+index aa822cf..9f2928b 100644
+--- a/meta/recipes-devtools/gcc/gcc-4.8.inc
++++ b/meta/recipes-devtools/gcc/gcc-4.8.inc
+@@ -119,21 +119,4 @@ EXTRA_OECONF_PATHS = " \
+                       --with-sysroot=${STAGING_DIR_TARGET} \ 
+                       --with-build-sysroot=${STAGING_DIR_TARGET}"
+ 
+-do_configure_prepend () {
+-        # teach gcc to find correct target includedir when checking libc ssp support
+-        mkdir -p ${B}/gcc
+-        echo "NATIVE_SYSTEM_HEADER_DIR = ${SYSTEMHEADERS}" > ${B}/gcc/t-oe
+-        cat ${S}/gcc/defaults.h | grep -v "\#endif.*GCC_DEFAULTS_H" > ${B}/gcc/defaults.h.new
+-        cat >>${B}/gcc/defaults.h.new <<_EOF
+-#ifndef STANDARD_STARTFILE_PREFIX_1
+-#define STANDARD_STARTFILE_PREFIX_1 "${SYSTEMLIBS}"
+-#endif
+-#ifndef STANDARD_STARTFILE_PREFIX_2
+-#define STANDARD_STARTFILE_PREFIX_2 "${SYSTEMLIBS1}"
+-#endif
+-#define SYSTEMLIBS_DIR "${SYSTEMLIBS}"
+-#endif /* ! GCC_DEFAULTS_H */
+-_EOF
+-        mv ${B}/gcc/defaults.h.new ${B}/gcc/defaults.h
+-}
+ 
+diff --git a/meta/recipes-devtools/gcc/gcc-configure-common.inc b/meta/recipes-devtools/gcc/gcc-configure-common.inc
+index 31e3cc4..4a10554 100644
+--- a/meta/recipes-devtools/gcc/gcc-configure-common.inc
++++ b/meta/recipes-devtools/gcc/gcc-configure-common.inc
+@@ -78,15 +78,9 @@ do_configure_prepend () {
+ 	echo "NATIVE_SYSTEM_HEADER_DIR = ${SYSTEMHEADERS}" > ${B}/gcc/t-oe
+ 	cat ${S}/gcc/defaults.h | grep -v "\#endif.*GCC_DEFAULTS_H" > ${B}/gcc/defaults.h.new
+ 	cat >>${B}/gcc/defaults.h.new <<_EOF
+-#ifndef STANDARD_INCLUDE_DIR
+-#define STANDARD_INCLUDE_DIR "${SYSTEMHEADERS}"
+-#endif
+-#ifndef STANDARD_STARTFILE_PREFIX_1
++#define NATIVE_SYSTEM_HEADER_DIR "${SYSTEMHEADERS}"
+ #define STANDARD_STARTFILE_PREFIX_1 "${SYSTEMLIBS}"
+-#endif
+-#ifndef STANDARD_STARTFILE_PREFIX_2
+ #define STANDARD_STARTFILE_PREFIX_2 "${SYSTEMLIBS1}"
+-#endif
+ #define SYSTEMLIBS_DIR "${SYSTEMLIBS}"
+ #endif /* ! GCC_DEFAULTS_H */
+ _EOF
+diff --git a/meta/lib/oe/sdk.py b/meta/lib/oe/sdk.py
+index 5643199..4a03e96 100644
+--- a/meta/lib/oe/sdk.py
++++ b/meta/lib/oe/sdk.py
+@@ -50,8 +50,9 @@ class Sdk(object):
+                                      "*.la"))
+ 
+         # Link the ld.so.cache file into the hosts filesystem
+-        link_name = os.path.join(self.sdk_output, self.sdk_native_path,
+-                                 self.sysconfdir, "ld.so.cache")
++        sysconfdir = os.path.join(self.sdk_output, self.sdk_native_path, self.sysconfdir)
++        bb.utils.mkdirhier(sysconfdir)
++        link_name = os.path.join(sysconfdir, "ld.so.cache")
+         os.symlink("/etc/ld.so.cache", link_name)
+ 
+         execute_pre_post_process(self.d, self.d.getVar('SDK_POSTPROCESS_COMMAND', True))

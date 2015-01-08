@@ -1,0 +1,14 @@
+[Unit]
+Description= Disable the Runtime power management of SPI
+RequiresMountsFor=/sys/
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo on > /sys/devices/pci0000:00/0000:00:07.1/power/control'
+ExecStop=/bin/sh -c 'echo auto > /sys/devices/pci0000:00/0000:00:07.1/power/control'
+RemainAfterExit=1
+StandardOutput=null
+
+[Install]
+WantedBy=default.target
+

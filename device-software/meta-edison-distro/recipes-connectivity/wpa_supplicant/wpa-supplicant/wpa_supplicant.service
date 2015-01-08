@@ -1,0 +1,19 @@
+[Unit]
+Description=WPA supplicant service
+Requires=sys-subsystem-net-devices-wlan0.device
+After=sys-subsystem-net-devices-wlan0.device
+
+[Service]
+Type=simple
+
+# start wpa_supplicant service
+ExecStart=/usr/sbin/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant.conf -iwlan0 -Dnl80211 -u -O /var/run/wpa_supplicant
+
+# start wpa_supplicant_event service after the start of wpa_supplicant service
+ExecStartPost=/bin/systemctl start wpa_supplicant_event
+
+# stop wpa_supplicant_event service after the stop of wpa_supplicant service
+ExecStopPost=/bin/systemctl stop wpa_supplicant_event
+
+[Install]
+WantedBy=multi-user.target

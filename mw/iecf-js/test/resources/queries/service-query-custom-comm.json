@@ -1,0 +1,7 @@
+{
+  "name" : "/service/without/plugin",
+  "type" : {
+    "name": "myprotocol",
+    "protocol" : "tcp"
+  }
+}

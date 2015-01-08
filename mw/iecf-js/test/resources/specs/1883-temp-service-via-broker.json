@@ -1,0 +1,11 @@
+{
+  "name" : "/INTEL/NDG/temperature",
+  "type" : {
+    "name": "mqtt",
+    "protocol" : "tcp"
+  },
+  "address" : "127.0.0.1",
+  "port" : 1883,
+  "properties" : {"dataType": "float"},
+  "type_params": {"ssl": false}
+}

@@ -1,0 +1,11 @@
+{
+  "name" : "/INTEL/NDG/temperature",
+  "type" : {
+    "name": "mqttpubsub",
+    "protocol" : "tcp"
+  },
+  "port" : 1883,
+  "properties" : {"dataType": "float"},
+  "comm_params": {"ssl": false},
+  "advertise": {"locally": true, "cloud": false}
+}

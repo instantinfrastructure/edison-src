@@ -1,0 +1,7 @@
+{
+  "name" : ".*dummyserver",
+  "type" : {
+    "name": "mqtt",
+    "protocol" : "tcp"
+  }
+}

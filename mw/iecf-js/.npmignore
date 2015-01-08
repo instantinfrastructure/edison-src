@@ -1,0 +1,10 @@
+example-non-production
+doc/design
+doc/api
+node_modules
+coverage
+npm-debug.log
+.idea
+*~
+.npmignore
+12commandments.txt

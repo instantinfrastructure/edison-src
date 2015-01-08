@@ -1,0 +1,3 @@
+{
+  "functions": ["send", "subscribe", "unsubscribe", "setReceivedMessageHandler", "done"]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "/ndg/temperature/cpuTemp",
+    "type": {
+        "name": "zmqreqrep",
+        "protocol": "tcp"
+    },
+    "port": 48569,
+    "properties": {
+        "dataType": "float",
+        "unit": "F"
+    },
+    "advertise": {
+        "locally": true,
+        "cloud": false
+    }
+}

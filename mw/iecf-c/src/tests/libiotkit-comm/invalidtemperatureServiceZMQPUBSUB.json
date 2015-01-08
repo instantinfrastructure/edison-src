@@ -1,0 +1,11 @@
+{
+  "name": "/ndg/temperature/cpuTemp",
+  "type": {
+    "name": "._zmqpubsub",
+    "protocol": ""
+  },
+  "address" : "127",
+  "port": 0,
+  "properties": {"dataType": "float", "unit": "F"},
+  "advertise": {"locally": true, "cloud": false}
+}

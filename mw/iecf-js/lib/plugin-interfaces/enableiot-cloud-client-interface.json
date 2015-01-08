@@ -1,0 +1,3 @@
+{
+    "functions": ["registerSensor", "publish", "unsubscribe", "setReceivedMessageHandler", "done"]
+}

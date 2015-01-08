@@ -1,0 +1,9 @@
+{
+  "name": "/my/home/thermostat/sensor",
+  "type": {
+    "name": "zmqpubsub",
+    "protocol": "tcp"
+  },
+  "port": 8999,
+  "properties": {"dataType": "float", "unit": "F", "sensorType": "ambient"}
+}

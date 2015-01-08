@@ -1,0 +1,10 @@
+[Unit]
+Description=Edison PWR button handler
+
+[Service]
+ExecStart=/usr/bin/pwr_button_handler
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+

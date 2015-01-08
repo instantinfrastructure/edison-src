@@ -1,0 +1,11 @@
+{
+  "pluginInterfaceDirPaths": [],
+  "pluginDirPaths": [],
+  "superInterfaceFilePath": "",
+  "communicationPlugins": {
+    "fileSuffixes": {
+      "clientFileSuffix": "client",
+      "serverFileSuffix": "service"
+    }
+  }
+}

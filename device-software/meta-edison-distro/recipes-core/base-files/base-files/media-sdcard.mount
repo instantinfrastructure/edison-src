@@ -1,0 +1,12 @@
+[Unit]
+Description=Mount for SDCard
+Requires=dev-mmcblk1p1.device
+After=dev-mmcblk1p1.device
+
+[Install]
+WantedBy=default.target
+
+[Mount]
+What=/dev/mmcblk1p1
+Where=/media/sdcard
+TimeoutSec=3

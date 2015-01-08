@@ -1,0 +1,14 @@
+iotkit-comm says that when programming in Javascript follow the 12 commandments:
+
+1. Objects and filenames should have one-to-one correspondence. Please don't relax this rule unless you think it will improve code clarity in your specific scenario.
+2. Objects must have a constructor with a capitalized name
+3. Object methods must be defined in the prototype object
+4. Use the 'folders as modules' semantics to organize code into packages.
+5. 'use strict' everywhere (see http://stackoverflow.com/questions/1335851/what-does-use-strict-do-in-javascript-and-what-is-the-reasoning-behind-it)
+6. Don't use callbacks willy nilly. Callbacks are needed mostly in situations where a program has better things to do than wait for a return value, OR if the callback is different for different inputs to the called function. Try not to use callbacks in other situations unless you have a good reason.
+7. MINIMIZE putting "stuff" in global namespace
+8. DO NOT modify prototype at non-designated locations unless two other peers approve. If approved, please document this fact somewhere easy to find.
+9. DO NOT sneak in variables or methods willy nilly. Please make code execution easy to trace.
+10. DO NOT try to automate the code writing process. For example, just because you can inject common variables and methods into every file in a module, does not mean its OK to do that. Please explicitly include the common code where its needed. Prefer a little bit of redundancy so that we have less ambiguity. Again, keep javascript code simple to trace.
+11. DO NOT over-engineer, over-automate, or over-architect. Javascript code can be hell to debug so please, please keep it simple and easily traceable.
+12. DO NOT create memory leaks when using closures. In other words, please don't use closures unless you know what you are doing.

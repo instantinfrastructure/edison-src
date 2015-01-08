@@ -1,0 +1,27 @@
+From 978c6c00d6251c9bef4ba1c0fc8b4196bbceeaf3 Mon Sep 17 00:00:00 2001
+From: Saul Wold <sgw@linux.intel.com>
+Date: Tue, 6 May 2014 14:14:55 -0700
+Subject: openssh: add /var/log/lastlog to volatile list
+
+The /var/log/messages reports /var/log/lastlog as missing, since openssh
+needs this file, create it as a volatile.
+
+[YOCTO #6172]
+
+(From OE-Core rev: a29af8c20187a65fbdbbedd0b7158c07d3e713cf)
+
+(From OE-Core rev: 219804c682344a934821c6b23bc9f7cf9cc94cd4)
+
+Signed-off-by: Saul Wold <sgw@linux.intel.com>
+Signed-off-by: Richard Purdie <richard.purdie@linuxfoundation.org>
+
+diff --git a/meta/recipes-connectivity/openssh/openssh/volatiles.99_sshd b/meta/recipes-connectivity/openssh/openssh/volatiles.99_sshd
+index 122320a..a0d2af3 100644
+--- a/meta/recipes-connectivity/openssh/openssh/volatiles.99_sshd
++++ b/meta/recipes-connectivity/openssh/openssh/volatiles.99_sshd
+@@ -1 +1,2 @@
+ d root root 0755 /var/run/sshd none
++f root root 0644 /var/log/lastlog none
+-- 
+cgit v0.10.1
+

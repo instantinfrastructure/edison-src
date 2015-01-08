@@ -1,0 +1,14 @@
+[Unit]
+Description=USB Ethernet gadget
+
+
+[Service]
+Type=oneshot
+ExecStartPre=-@BASE_BINDIR@/sh -c "echo 'connect' > /sys/class/udc/dwc3-device.1/soft_connect"
+ExecStart=-@BASE_BINDIR@/sh -c " ifconfig usb0 192.168.2.15"
+ExecReload=-@BASE_BINDIR@/sh -c " ifconfig usb0 192.168.2.15"
+StandardError=syslog
+RemainAfterExit=no
+
+[Install]
+WantedBy=basic.target

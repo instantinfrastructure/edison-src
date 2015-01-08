@@ -1,0 +1,8 @@
+{
+  "name": "/ndg/temperature/cpuTemp",
+  "type": {
+    "name": "zmqreqrep",
+    "protocol": "tcp"
+  },
+  "properties": {"dataType": "float", "unit": "F"}
+}

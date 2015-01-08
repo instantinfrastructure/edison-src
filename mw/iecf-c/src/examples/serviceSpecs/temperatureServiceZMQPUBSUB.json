@@ -1,0 +1,16 @@
+{
+    "name": "/ndg/temperature/cpuTemp",
+    "type": {
+        "name": "zmqpubsub",
+        "protocol": "tcp"
+    },
+    "port": 48563,
+    "properties": {
+        "dataType": "float",
+        "unit": "F"
+    },
+    "advertise": {
+        "locally": true,
+        "cloud": false
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "source": {
+    "exclude": ["example-non-production", "coverage", "node_modules"]
+  },
+  "opts": {
+    "destination": "doc/api/",
+    "recurse": true,
+    "tutorials": "doc/tutorials"
+  },
+  "plugins": [ "plugins/markdown" ]
+}

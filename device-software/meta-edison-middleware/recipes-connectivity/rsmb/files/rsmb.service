@@ -1,0 +1,11 @@
+[Unit]
+Description=Mosquitto - lightweight server implementation of the MQTT and MQTT-SN protocols
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/broker_mqtts32
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

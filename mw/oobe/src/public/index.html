@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edison One-time Setup</title>
+    <link rel="stylesheet" type="text/css" href="main.css" media="screen"/>
+    <script type="text/javascript">
+        function displayWiFiInputs(protocol) {
+            if (protocol === 'WEP' || protocol === 'WPA-PSK') {
+                document.getElementById("netpasslabel").style.visibility="visible";
+                document.getElementById("netpass").style.visibility="visible";
+
+                document.getElementById("netuserlabel").style.visibility="hidden";
+                document.getElementById("netuser").style.visibility="hidden";
+            } else if (protocol === 'WPA-EAP') {
+                document.getElementById("netpasslabel").style.visibility="visible";
+                document.getElementById("netpass").style.visibility="visible";
+
+                document.getElementById("netuserlabel").style.visibility="visible";
+                document.getElementById("netuser").style.visibility="visible";
+            } else {
+                document.getElementById("netpasslabel").style.visibility="hidden";
+                document.getElementById("netpass").style.visibility="hidden";
+
+                document.getElementById("netuserlabel").style.visibility="hidden";
+                document.getElementById("netuser").style.visibility="hidden";
+            }
+        }
+
+        function saveFields() {
+            document.cookie = '{"name": "' + document.getElementById("name").value + '",' +
+                    '"ssid": "' + document.getElementById("ssid").value + '",' +
+                    '"protocol": "' + document.getElementById("protocol").value + '",' +
+                    '"netuser": "' + document.getElementById("netuser").value + '"' +
+                    '}';
+        }
+
+        window.onload = function () {
+            // restore any saved fields
+
+            if (!document.cookie)
+                return;
+
+            var savedFields = JSON.parse(document.cookie);
+
+            document.getElementById("name").value = savedFields.name;
+            document.getElementById("ssid").value = savedFields.ssid;
+            document.getElementById("protocol").value = savedFields.protocol;
+            document.getElementById("netuser").value = savedFields.netuser;
+
+            displayWiFiInputs(savedFields.protocol);
+        };
+    </script>
+    <noscript>
+        Please enable Javascript. It is needed for this page to work correctly. Thank you.
+    </noscript>
+</head>
+<body>
+<a href="/" style="text-decoration: none"><h1>Edison One-time Setup</h1></a>
+<form id="setup_form" name="setup_form" method="post" action="submitForm" onsubmit="saveFields()">
+    <div id="name_section" class="section">
+        <div class="header">Change Device Name</div>
+        <table class="content">
+            <tr>
+                <td class="left">
+                    This changes the device name for the access point and for mDNS. This does not change the default
+                    login, which remains as root. Minimum of 5 characters (leave field empty to skip setting a device
+                    name at this time.)
+                </td>
+                <td class="middle"><label for="name">New Device Name:</label></td>
+                <td class="right"><input type="text" id="name" name="name" class="textbox"></td>
+            </tr>
+        </table>
+    </div>
+    <div id="wifi_section" class="section">
+        <div class="header">Connect to a WiFi Network</div>
+        <table class="content">
+            <tr>
+                <td class="left">
+                    Connect to a wireless network by entering the credentials. This could take around
+                    <b>30 seconds</b> to complete (leave fields empty to skip setting up WiFi at this time.)
+                </td>
+                <td class="middle">
+                    <label for="ssid">Network Name:</label><br>
+                    <label for="protocol">Network Protocol:</label><br>
+                    <label id="netpasslabel" for="netpass" style="visibility: hidden">Password:</label><br>
+                    <label id="netuserlabel" for="netuser" style="visibility: hidden">Username:</label>
+                </td>
+                <td class="right">
+                    <input type="text" id="ssid" name="ssid" class="textbox">
+                    <select id="protocol" name="protocol" class="selector"
+                            onchange="displayWiFiInputs(document.getElementById('protocol').value)">
+                        <option value="OPEN">Open</option>
+                        <option value="WEP">WEP</option>
+                        <option value="WPA-PSK">WPA-Personal or WPA2-Personal</option>
+                        <option value="WPA-EAP">WPA-Enterprise or WPA2-Enterprise</option>
+                    </select>
+                    <input type="password" id="netpass" name="netpass" class="textbox" style="visibility: hidden">
+                    <input type="text" id="netuser" name="netuser" class="textbox" style="visibility: hidden">
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="submit_section">
+        <input class="submit_button" type="submit" value="Submit">
+    </div>
+</form>
+</body>
+</html>

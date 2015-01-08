@@ -1,0 +1,41 @@
+{
+  "name": "iotkit-comm",
+  "version": "0.2.0",
+  "description": "Allows Intel Edison devices to conveniently discover and communicate with each other and the cloud",
+  "main": "lib/main.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha -R spec -t 3000 -S; echo Done.",
+    "test-list": "./node_modules/.bin/mocha -R doc -t 3000 -S > test-list.html; echo Done.",
+    "docs": "./node_modules/.bin/jsdoc . -c jsdoc-conf.json README.md; echo Done.",
+    "coverage": "./node_modules/.bin/istanbul cover --report html node_modules/.bin/_mocha -- -R Spec -t 3000 -S; echo Done."
+  },
+  "engines": {
+    "node": ">=0.10.28"
+  },
+  "repository": "",
+  "dependencies": {
+    "mdns2": ">=2.1.3",
+    "mqtt": ">=0.3.8",
+    "zmq": ">=2.6.0"
+  },
+  "devDependencies": {
+    "chai": "*",
+    "istanbul": "*",
+    "jsdoc": "<=3.3.0",
+    "mocha": "*"
+  },
+  "keywords": [
+    "distributed",
+    "discovery",
+    "networking",
+    "communication"
+  ],
+  "author": "Intel Corporation",
+  "license": "LGPL",
+  "readmeFilename": "README.md",
+  "directories": {
+    "lib": "lib",
+    "doc": "doc",
+    "example": "example"
+  }
+}

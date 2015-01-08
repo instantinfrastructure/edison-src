@@ -1,0 +1,12 @@
+{
+    "pluginInterfaceDir": "plugin-interfaces",
+    "pluginDir": "plugins",
+    "superInterfaceName": "interface-for-interfaces",
+    "serviceDir": "serviceSpecs",
+    "communication": {
+        "pluginFileSuffixes": {
+            "clientFileSuffix": "client",
+            "serverFileSuffix": "service"
+        }
+    }
+}

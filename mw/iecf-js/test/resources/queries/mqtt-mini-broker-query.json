@@ -1,0 +1,7 @@
+{
+  "name" : ".*minibroker$",
+  "type" : {
+    "name": "mqtt",
+    "protocol" : "tcp"
+  }
+}

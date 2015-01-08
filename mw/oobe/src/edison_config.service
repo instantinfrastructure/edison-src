@@ -1,0 +1,12 @@
+[Unit]
+Description=The Edison status and configuration service
+After=mdns.service
+
+[Service]
+ExecStart=/bin/su root -c 'node /usr/lib/edison_config_tools/edison-config-server.js'
+Restart=always
+RestartSec=10s
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

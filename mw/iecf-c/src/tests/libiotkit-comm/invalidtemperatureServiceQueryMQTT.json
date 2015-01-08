@@ -1,0 +1,7 @@
+{
+  "name" : ".*temperature.*",
+  "type" : {
+    "name" "mqttpubsub",
+    "protocol" : "tcp"
+  }
+}

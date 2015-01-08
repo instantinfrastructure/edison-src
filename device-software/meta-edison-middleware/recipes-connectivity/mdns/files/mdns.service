@@ -1,0 +1,11 @@
+[Unit]
+Description=Zero-configuration networking
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/mdnsd
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

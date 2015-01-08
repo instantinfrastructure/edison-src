@@ -1,0 +1,15 @@
+{
+    "name" : "/INTEL/NDG/temperature",
+    "type" : {
+        "name": "iotkit-agent",
+        "protocol" : "tcp"
+    },
+    "address" : "127.0.0.1",
+    "port" : 1884,
+    "properties" : {
+        "dataType": "float"
+    },
+    "comm_params": {
+        "ssl": false
+    }
+}
