@@ -1,9 +1,8 @@
-From 225d200472d9c9af2117c8085b3682bcdd4dbeae Mon Sep 17 00:00:00 2001
-From: Jenkins <dswci@intel.com>
-Date: Tue, 14 Oct 2014 14:57:16 +0200
-Subject: [PATCH] Squashed all commits from upstream to Edison
+From 6727c23f77ee20984e24069f4870550741feaaa4 Mon Sep 17 00:00:00 2001
+From: Chris McClimans <chris@hippiehacker.org>
+Date: Thu, 8 Jan 2015 05:14:32 -0800
+Subject: [PATCH 1/2] applied upstream_to_edison.patch from rel1-ww42-14
 
-Change-Id: Ifec2f1375746c4c608cb0f799a6a5b9c2c96eaa6
 ---
  Documentation/kernel-parameters.txt                |    6 +-
  arch/x86/Kconfig                                   |   62 +-
@@ -99509,5 +99508,121 @@ index d1ae869d..fc12d6e 100644
  #include <sound/pcm_params.h>
  #include <sound/soc.h>
 -- 
-1.7.9.5
+2.2.0
+
+
+From 4a7c648b3d0cf96ccaf6b6fd133577293984ca45 Mon Sep 17 00:00:00 2001
+From: Chris McClimans <chris@hippiehacker.org>
+Date: Thu, 8 Jan 2015 15:59:16 -0800
+Subject: [PATCH 2/2] adding support for usb hid gadget
+
+---
+ drivers/usb/gadget/hid.c | 79 ++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 77 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/gadget/hid.c b/drivers/usb/gadget/hid.c
+index c36260ea..6d1c4d5 100644
+--- a/drivers/usb/gadget/hid.c
++++ b/drivers/usb/gadget/hid.c
+@@ -236,6 +236,73 @@ static struct platform_driver hidg_plat_driver = {
+ 	},
+ };
+ 
++/* This is a quick and dirty hack to demonstrate the gadget hid driver.
++   Normally the platform_device descriptor would be part of the board
++   support for the device, e.g. in arch/arm/mach-omap2/devices.c,
++   but for convenience I am putting it in to the g_hid module to make
++   easier for testing.
++
++   The structures my_hid_data and my_hid are straight from
++   Documentation/usb/gadget_hid.txt
++ */
++
++/* hid descriptor for a keyboard */
++static struct hidg_func_descriptor my_hid_data = {
++        .subclass               = 0, /* No subclass */
++        .protocol               = 1, /* Keyboard */
++        .report_length          = 8,
++        .report_desc_length     = 63,
++        .report_desc            = {
++                0x05, 0x01,     /* USAGE_PAGE (Generic Desktop)           */
++                0x09, 0x06,     /* USAGE (Keyboard)                       */
++                0xa1, 0x01,     /* COLLECTION (Application)               */
++                0x05, 0x07,     /*   USAGE_PAGE (Keyboard)                */
++                0x19, 0xe0,     /*   USAGE_MINIMUM (Keyboard LeftControl) */
++                0x29, 0xe7,     /*   USAGE_MAXIMUM (Keyboard Right GUI)   */
++                0x15, 0x00,     /*   LOGICAL_MINIMUM (0)                  */
++                0x25, 0x01,     /*   LOGICAL_MAXIMUM (1)                  */
++                0x75, 0x01,     /*   REPORT_SIZE (1)                      */
++                0x95, 0x08,     /*   REPORT_COUNT (8)                     */
++                0x81, 0x02,     /*   INPUT (Data,Var,Abs)                 */
++                0x95, 0x01,     /*   REPORT_COUNT (1)                     */
++                0x75, 0x08,     /*   REPORT_SIZE (8)                      */
++                0x81, 0x03,     /*   INPUT (Cnst,Var,Abs)                 */
++                0x95, 0x05,     /*   REPORT_COUNT (5)                     */
++                0x75, 0x01,     /*   REPORT_SIZE (1)                      */
++                0x05, 0x08,     /*   USAGE_PAGE (LEDs)                    */
++                0x19, 0x01,     /*   USAGE_MINIMUM (Num Lock)             */
++                0x29, 0x05,     /*   USAGE_MAXIMUM (Kana)                 */
++                0x91, 0x02,     /*   OUTPUT (Data,Var,Abs)                */
++                0x95, 0x01,     /*   REPORT_COUNT (1)                     */
++                0x75, 0x03,     /*   REPORT_SIZE (3)                      */
++                0x91, 0x03,     /*   OUTPUT (Cnst,Var,Abs)                */
++                0x95, 0x06,     /*   REPORT_COUNT (6)                     */
++                0x75, 0x08,     /*   REPORT_SIZE (8)                      */
++                0x15, 0x00,     /*   LOGICAL_MINIMUM (0)                  */
++                0x25, 0x65,     /*   LOGICAL_MAXIMUM (101)                */
++                0x05, 0x07,     /*   USAGE_PAGE (Keyboard)                */
++                0x19, 0x00,     /*   USAGE_MINIMUM (Reserved)             */
++                0x29, 0x65,     /*   USAGE_MAXIMUM (Keyboard Application) */
++                0x81, 0x00,     /*   INPUT (Data,Ary,Abs)                 */
++                0xc0            /* END_COLLECTION                         */
++        }
++};
++
++static struct platform_device my_hid = {
++        .name                   = "hidg",
++        .id                     = 0,
++        .num_resources          = 0,
++        .resource               = 0,
++        .dev.platform_data      = &my_hid_data,
++};
++
++int __init init_my_hid(void)
++{
++	pr_info("g_hid: loading keyboard HID descriptor\n");
++	return platform_device_register(&my_hid);
++}
++
++/* End hack */
+ 
+ MODULE_DESCRIPTION(DRIVER_DESC);
+ MODULE_AUTHOR("Fabien Chouteau, Peter Korsgaard");
+@@ -245,14 +312,22 @@ static int __init hidg_init(void)
+ {
+ 	int status;
+ 
++	init_my_hid();
++
+ 	status = platform_driver_probe(&hidg_plat_driver,
+ 				hidg_plat_driver_probe);
+-	if (status < 0)
++	if (status < 0) {
++		pr_info("platform_driver_probe failed: %d\n", status);
++		platform_device_unregister(&my_hid);
+ 		return status;
++	}
+ 
+ 	status = usb_composite_probe(&hidg_driver);
+-	if (status < 0)
++	if (status < 0) {
++		pr_info("usb_composite_probe failed: %d\n", status);
+ 		platform_driver_unregister(&hidg_plat_driver);
++		platform_device_unregister(&my_hid);
++	}
+ 
+ 	return status;
+ }
+-- 
+2.2.0
 
