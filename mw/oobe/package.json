@@ -1,0 +1,11 @@
+{
+  "name": "oobe",
+  "version": "1.1.0",
+  "description": "Web-based administration portal for conifiguring and upgrading the Edison",
+  "main": "src/server.js",
+  "dependencies": {
+    "multiparty": "*"
+  },
+  "author": "Intel Corporation",
+  "license": "LGPL"
+}

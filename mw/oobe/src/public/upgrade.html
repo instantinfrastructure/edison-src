@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edison Setup</title>
+    <link rel="stylesheet" type="text/css" href="main.css" media="screen"/>
+    <script type="text/javascript">
+        function disableSubmitButton() {
+            if(document.getElementById("imagefile").value) {
+                document.getElementById("upgradebtn").style.visibility = "hidden";
+                document.getElementById("statussection").innerHTML = "(Uploading. Please wait...)";
+                document.getElementById("upgrade_form").submit();
+                return true;
+            }
+            alert("Please select a firmware image file first.");
+            return false;
+        }
+    </script>
+    <noscript>
+        Please enable Javascript. It is needed for this page to work correctly. Thank you.
+    </noscript>
+</head>
+<body>
+<a href="/" style="text-decoration: none"><h1>Edison Setup</h1></a>
+<div class="menu">
+    <table>
+        <tr>
+            <td class="menuitem">
+                <a href="/" style="text-decoration: none; color:black">Configure</a>
+            </td>
+            <td class="menuitem" style="background-color: lightgrey">
+                <a href="upgrade.html" style="text-decoration: none; color: #0062a8">Upgrade</a>
+            </td>
+        </tr>
+    </table>
+</div>
+<!-- errors will go here -->
+<form id="upgrade_form" name="upgrade_form" enctype="multipart/form-data" method="POST" action="submitFirmwareImage">
+    <div id="upgrade_section" class="section">
+        <div class="header">Upgrade or Replace Device Firmware</div>
+        <table class="content">
+            <tr>
+                <td class="left">
+                    This does not erase the contents of the <code>/home</code> directory. However, it is still
+                    recommended that all important information on the device be backed up to avoid loosing data due
+                    to unforeseen errors.
+                </td>
+                <td class="middle">
+                    <label for="imagefile">Firmware Image File:</label>
+                    <input id="imagefile" name="imagefile" type="file" accept=".zip">
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="submit_section">
+        <input id="upgradebtn" name="upgradebtn" class="submit_button" type="submit" value="Upgrade"
+               onclick="return disableSubmitButton()">
+        <div id="statussection" style="font-size: 12pt">
+        </div>
+    </div>
+
+</form>

@@ -54,7 +54,9 @@ exit_ota_update () {
     fi_echo "Rebooting...."
     # dump journal to log file
     journalctl -u ota-update -o short-iso >> /ota-update.log
-    reboot
+    systemctl daemon-reload
+    systemctl stop home.mount
+    systemctl default
 }
 
 # continue normal flow or exit on error code

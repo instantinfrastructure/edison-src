@@ -420,6 +420,10 @@ CONFIG_CTRL_IFACE_DBUS_NEW=y
 # external RADIUS server can be supported with hostapd.
 CONFIG_AP=y
 
+# P2P (Wi-Fi Direct)
+# This can be used to enable P2P support in wpa_supplicant. See README-P2P for
+# more information on P2P operations.
+CONFIG_P2P=y
 CONFIG_BGSCAN_SIMPLE=y
 
 # Autoscan
@@ -432,8 +436,5 @@ CONFIG_AUTOSCAN_EXPONENTIAL=y
 # For periodic module:
 #CONFIG_AUTOSCAN_PERIODIC=y
 
-# WPA_CLI Private commands
-# This enables private commands usage by wpa_cli
-#
-CFLAGS += -DEDISON_USE_PRIVATE_BCM_CMD
-CONFIG_USE_VENDOR_PRIVATE_CMD=y
+CFLAGS += -DEDISON_TARGET
+CFLAGS += -DANDROID_P2P

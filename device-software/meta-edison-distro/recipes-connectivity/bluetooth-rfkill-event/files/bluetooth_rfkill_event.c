@@ -298,24 +298,25 @@ void load_bd_add(void)
 
     fp = fopen(BD_ADD_FACTORY_FILE, "r");
 
-    /* if BD add file has not been provisioned use default one */
+    /* if BD add file has not been provisioned do not send VSC to set BD address: the one configured in OTP will be used or default FW one */
     if (fp == NULL)
     {
-        memcpy(factory_bd_add, default_bd_addr, sizeof(factory_bd_add));
-        main_opts.bd_add = factory_bd_add;
-        main_opts.set_bd = TRUE;
+        main_opts.set_bd = FALSE;
         return;
     }
 
     ret = fscanf(fp, "%17c", factory_bd_add);
 
-    /* if factory BD address is not well formatted or not present use default one*/
+    /* if factory BD address is not well formatted or not present do not send VSC to set BD address: the one configured in OTP will be used or default FW one */
     if (!(ret == 1 && check_bd_format(factory_bd_add)))
     {
-        memcpy(factory_bd_add, default_bd_addr, sizeof(factory_bd_add));
+        main_opts.set_bd = FALSE;
     }
-    main_opts.bd_add = factory_bd_add;
-    main_opts.set_bd = TRUE;
+    else
+    {
+        main_opts.bd_add = factory_bd_add;
+        main_opts.set_bd = TRUE;
+    }
 
     fclose(fp);
 

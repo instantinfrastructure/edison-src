@@ -1,8 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 # first install script to do post flash install
 
 # global variable set to 1 if output is systemd journal
 fi_journal_out=0
+
+export PATH="$PATH:/usr/sbin/"
 
 # handle argument, if first-install is called from systemd service
 # arg1 is "systemd-service"
@@ -48,11 +50,11 @@ exit_first_install () {
         # next reboot will be on multi-user target
         fw_setenv bootargs_target multi-user
     fi
-
-    fi_echo "Rebooting...."
     # dump journal to log file
     journalctl -u first-install -o short-iso >> /first-install.log
-    reboot
+    systemctl daemon-reload
+    systemctl stop home.mount
+    systemctl default
 }
 
 # continue normal flow or exit on error code
@@ -128,15 +130,17 @@ mkfs.ext4 -m0 /dev/disk/by-partlabel/home
 fi_assert $? "Formatting home partition"
 
 # backup initial /home/root directory
-cp -R /home/root /tmp
+mkdir /tmp/oldhome
+cp -R /home/* /tmp/oldhome/
 fi_assert $? "Backup home/root contents of rootfs"
 
 # mount home partition on /home
 mount /dev/disk/by-partlabel/home /home
 fi_assert $? "Mount /home partition"
 
-# copy back contents to /home
-mv /tmp/root /home
+# copy back contents to /home and cleanup
+mv /tmp/oldhome/* /home/
+rm -rf /tmp/oldhome
 fi_assert $? "Restore home/root contents on new /home partition"
 
 # create a fat32 primary partition on all available space

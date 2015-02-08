@@ -7,6 +7,8 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=4a31e6c424761191227143b86f58a1ef"
 DEPENDS = "openssl"
 DEPENDS_class-target = "nodejs-native"
 
+PR = "r1"
+
 SRC_URI = "git://github.com/joyent/node.git;protocol=https;branch=v0.10;tag=v0.10.28"
 
 S = "${WORKDIR}/git"
@@ -20,8 +22,7 @@ ARCHFLAGS ?= ""
 # Node is way too cool to use proper autotools, so we install two wrappers to forcefully inject proper arch cflags to workaround gypi
 do_configure () {
     export LD="${CXX}"
-
-    ./configure --prefix=${prefix} --without-snapshot ${ARCHFLAGS}
+    ./configure --prefix=${prefix} --without-snapshot --shared-openssl ${ARCHFLAGS}
 }
 
 do_compile () {
@@ -50,6 +51,17 @@ do_install_append_class-target () {
     fi
 }
 
+do_install_append_class-native() {
+    # /usr/bin/npm is symlink to /usr/lib/node_modules/npm/bin/npm-cli.js
+    # use sed on npm-cli.js because otherwise symlink is replaced with normal file and
+    # npm-cli.js continues to use old shebang
+    sed "1s^.*^#\!/usr/bin/env node^g" -i ${D}${libdir}/node_modules/npm/bin/npm-cli.js
+}
+
+do_install_append_class-target() {
+    sed "1s^.*^#\!${bindir}/env node^g" -i ${D}${libdir}/node_modules/npm/bin/npm-cli.js
+}
+
 pkg_postinst_${PN} () {
     sed -e '/^PATH=/aNODE_PATH=\/usr\/lib\/node_modules\/' \
         -e 's/\(^export\)\(.*\)/\1 NODE_PATH\2/' \
@@ -62,10 +74,12 @@ pkg_prerm_${PN} () {
         -i $D/etc/profile
 }
 
-RDEPENDS_${PN} = "curl python-shell python-datetime python-subprocess python-crypt python-textutils \
-                python-netclient python-ctypes python-misc python-compiler python-multiprocessing"
-
+RDEPENDS_${PN} = "curl"
 RDEPENDS_${PN}_class-native = ""
 
-FILES_${PN} += "${libdir}/node/wafadmin ${libdir}/node_modules ${libdir}/dtrace"
+PACKAGES += "${PN}-npm"
+FILES_${PN}-npm = "${libdir}/node_modules ${bindir}/npm"
+RDEPENDS_${PN}-npm = "python-shell python-datetime python-subprocess python-crypt python-textutils \
+                      python-netclient python-ctypes python-misc python-compiler python-multiprocessing"
+
 BBCLASSEXTEND = "native"

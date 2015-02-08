@@ -4,7 +4,6 @@ set BASE_DIR=%~dp0
 set USB_VID=8087
 set USB_PID=0a99
 set /a TIMEOUT=60
-set DO_DFU_FLASH=1
 
 ::Phone flash tools configuration part
 set DO_RECOVERY=0
@@ -14,10 +13,9 @@ set PFT_XML_FILE="%BASE_DIR%pft-config-edison.xml"
 :: Handle Ifwi file for DFU update
 set IFWI_DFU_FILE=%BASE_DIR%edison_ifwi-dbg
 
-set DO_LIST_VARIANTS=0
 set VAR_DIR=%BASE_DIR%u-boot-envs\
-set VARIANT_NAME_DEFAULT=edison-default
-set VARIANT_NAME_BLANK=edison-blank
+set VARIANT_NAME_DEFAULT=edison-defaultrndis
+set VARIANT_NAME_BLANK=edison-blankrndis
 set VARIANT_NAME=%VARIANT_NAME_BLANK%
 
 set LOG_FILENAME=flash.log
@@ -29,25 +27,11 @@ set argcount=0
 set appname=%0
 :parse_arg_start
 if -%1-==-- goto parse_arg_end
-if -%1- == --i- set /a DO_RECOVERY=1
-if -%1- == --d- set /a DO_DFU_FLASH=1
 if -%1- == ---recovery- (
 	set /a DO_RECOVERY=1
-	set /a DO_DFU_FLASH=0
 )
 if -%1- == ---keep-data- (
-	set /a DO_RECOVERY=0
 	set VARIANT_NAME=%VARIANT_NAME_DEFAULT%
-)
-if -%1- == --b- (
-	set /a DO_RECOVERY=1
-	set /a DO_DFU_FLASH=1
-	set VARIANT_NAME=%VARIANT_NAME_BLANK%
-)
-if -%1- == --l- set /a DO_LIST_VARIANTS=1
-if -%1- == --t- (
-	set VARIANT_NAME=%2
-	shift
 )
 if -%1- == -/?- set /a show_help=1
 if -%1- == --h- set /a show_help=1
@@ -64,21 +48,6 @@ if %show_help% == 1 (
 	exit /b
 )
 
-:: U-boot target listing part
-if %DO_LIST_VARIANTS% == 0 goto :skip_list_variants
-echo Availables U-boot targets:
-:: list all .env file in var_dir
-for /R "%VAR_DIR%" %%i in ( *.bin ) do (
-	:: echo the file-name only without extension
-	echo %%~ni
-)
-exit /b 5
-:skip_list_variants
-
-if %DO_DFU_FLASH% == 1 goto do_init_log
-if %DO_RECOVERY% == 1 goto do_init_log
-goto skip_init_log
-:do_init_log
 if %verbose_output% == 1 goto skip_init_log
 echo ** Flashing Edison Board %date% %time% ** >> %LOG_FILENAME%
 :skip_init_log
@@ -97,11 +66,11 @@ call:flash-ifwi
 if %errorlevel% neq 0 ( exit /b %errorlevel%)
 echo Recovery Success...
 echo You can now try a regular flash
+goto :skip_flash_kernel
 :skip_flash_ifwi
 
 :: ********************************************************************
 :: Kernel & rootfs flashing part
-if %DO_DFU_FLASH% == 0 goto :skip_flash_kernel
 echo Using U-boot target: %VARIANT_NAME%
 set VARIANT_FILE="%VAR_DIR%%VARIANT_NAME%.bin"
 	if not exist %VARIANT_FILE% (
@@ -159,8 +128,12 @@ call:flash-command --alt u-boot-env0 -D %VARIANT_FILE%
 if %errorlevel% neq 0 ( exit /b %errorlevel%)
 
 echo Flashing U-Boot Environment Backup
-call:flash-command --alt u-boot-env1 -D %VARIANT_FILE%
+call:flash-command --alt u-boot-env1 -D %VARIANT_FILE% -R
 if %errorlevel% neq 0 ( exit /b %errorlevel%)
+echo Rebooting to apply partiton changes
+call:dfu-wait
+if %errorlevel% neq 0 ( exit /b %errorlevel%)
+
 
 echo Flashing boot partition ^(kernel^)
 call:flash-command --alt boot -D "%BASE_DIR%edison-image-edison.hddimg"
@@ -173,37 +146,23 @@ if %errorlevel% neq 0 ( exit /b %errorlevel% )
 echo Rebooting
 echo U-boot ^& Kernel System Flash Success...
 if %VARIANT_NAME% == %VARIANT_NAME_BLANK% (
-	echo Your board needs to reboot twice to complete the flashing procedure, please do not unplug it for 2 minutes.
+	echo Your board needs to reboot to complete the flashing procedure, please do not unplug it for 2 minutes.
 )
 :skip_flash_kernel
 
 :: ********************************************************************
 :: The End
-if %DO_RECOVERY% == 0 (
-if %DO_DFU_FLASH% == 0 (
-	echo Nothing to do
-	call:print-usage %appname%
-))
-
 exit /b 0
 
 
 :print-usage
-	echo Usage: %1 [-hl] [--help] [--recovery] [--keep-data] [-m][-ipdb] [-t uboot-env]
+	echo Usage: %1 [-h] [--help] [--recovery] [--keep-data]
 	echo Update all software and restore board to its initial state.
 	echo  -h,--help     display this help and exit.
 	echo  -v            verbose output
 	echo  --recovery    recover the board to DFU mode using a dedicated tool,
 	echo                available only on linux and window hosts.
 	echo  --keep-data   preserve user data when flashing.
-	echo.
-	echo.
-	echo deprecated commands:
-	echo  -i            flash IFWI
-	echo  -d            flash U-boot, U-boot Environment, Linux Kernel, Rootfs
-	echo  -b            blank the device (eq -i -d -t %VARIANT_NAME_BLANK%)
-	echo  -l            list availables U-boot target environments and exit
-	echo  -t uboot-env  specify U-boot target environments to flash (default is %VARIANT_NAME%)
 	exit /b 5
 
 :flash-dfu-ifwi
@@ -218,7 +177,7 @@ exit /b 0
 	set filterout="on"
 	if %verbose_output% == 1 ( set filterout="off")
 
-	dfu-util -d %USB_VID%:%USB_PID% %* 2>&1 | cscript.exe //B filter-dfu-out.js %LOG_FILENAME% %filterout%
+	dfu-util -d %USB_VID%:%USB_PID% %* 2>&1 | cscript.exe /E:JScript //B filter-dfu-out.js %LOG_FILENAME% %filterout%
 
 	set /a err_num=%errorlevel%
 	if %err_num% neq 0 echo Flash failed on %*

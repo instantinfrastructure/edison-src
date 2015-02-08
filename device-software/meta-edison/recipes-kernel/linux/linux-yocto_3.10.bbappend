@@ -6,13 +6,3 @@ SRCREV_meta = "6ad20f049abd52b515a8e0a4664861cfd331f684"
 
 SRC_URI += "file://defconfig"
 SRC_URI += "file://upstream_to_edison.patch"
-do_configure() {
-  cp "${WORKDIR}/defconfig" "${B}/.config"
-}
-do_kernel_configme() {
-  cp "${WORKDIR}/defconfig" "${B}/.config"
-}
-do_patch() {
-  cd ${S}
-  git am "${WORKDIR}/upstream_to_edison.patch"
-}

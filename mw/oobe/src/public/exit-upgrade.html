@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaving Setup</title>
+    <link rel="stylesheet" type="text/css" href="main.css" media="screen"/>
+    <script type="text/javascript">
+        window.onload = function () {
+            document.cookie = '{}';
+        }
+    </script>
+    <noscript>
+        Please enable Javascript. It is needed for this page to work correctly. Thank you.
+    </noscript>
+</head>
+<body>
+<h1>Leaving Setup</h1>
+
+<div class='section'>
+    <div class="content" style="padding: 30px">
+        <p>The firmware file has been uploaded successfully and the device is about to upgrade. Please allow <b>5
+            mins</b> for the device to finish upgrading. The device will reboot twice before it is ready to use
+            again. If the upgrade is successful, data in the <code>/home</code> directory should remain unchanged.
+
+        <p><b>Important note:</b>
+
+        <p>The current version number of the device is <i>params_version</i>. After the upgrade, please log in via the
+        serial port and run the command <code>configure_edison --version</code> to verify that the version number has
+        changed. If that is not the case, the upgrade has failed and you must run the <code>reboot</code> command to
+        restore the device to its previous state.
+    </div>
+</div>
+</body>
+</html>

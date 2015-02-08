@@ -424,7 +424,7 @@ wmm_ac_vo_acm=0
 # 0 = disabled (default)
 # 1 = enabled
 # Note: You will also need to enable WMM for full HT functionality.
-#ieee80211n=1
+ieee80211n=1
 
 # ht_capab: HT capabilities (list of flags)
 # LDPC coding capability: [LDPC] = supported

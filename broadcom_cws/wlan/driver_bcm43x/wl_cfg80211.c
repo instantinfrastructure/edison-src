@@ -287,7 +287,7 @@ common_iface_combinations[] = {
 #endif
 
 #ifndef IBSS_COALESCE_ALLOWED
-#define IBSS_COALESCE_ALLOWED 0
+#define IBSS_COALESCE_ALLOWED 1
 #endif
 
 #ifndef IBSS_INITIAL_SCAN_ALLOWED
@@ -2606,6 +2606,7 @@ channel_to_chanspec(struct wiphy *wiphy, struct net_device *dev, u32 channel, u3
 	}
 	for (i = 0; i < dtoh32(list->count); i++) {
 		c = dtoh32(list->element[i]);
+		c = wl_chspec_driver_to_host(c);
 		if (channel <= CH_MAX_2G_CHANNEL) {
 			if (!CHSPEC_IS20(c))
 				continue;
@@ -2657,6 +2658,8 @@ exit:
 	if (buf)
 		kfree(buf);
 #undef LOCAL_BUF_SIZE
+	if (ret_c)
+		ret_c = wl_chspec_host_to_driver(ret_c);
 	WL_INFO(("return chanspec %x %d\n", ret_c, bw));
 	return ret_c;
 }
@@ -2738,7 +2741,10 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = 0;
 	size_t join_params_size;
 	chanspec_t chanspec = 0;
-	u32 param[2] = {0, 0};
+	struct {
+		u32 band;
+		u32 bw_cap;
+	} param = {0, 0};
 	u32 bw_cap = 0;
 
 	WL_TRACE(("In\n"));
@@ -2808,16 +2814,35 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 		cfg->ibss_starter = true;
 	}
 	if (chan) {
-		if (chan->band == IEEE80211_BAND_5GHZ)
-			param[0] = WLC_BAND_5G;
-		else if (chan->band == IEEE80211_BAND_2GHZ)
-			param[0] = WLC_BAND_2G;
-		err = wldev_iovar_getint(dev, "bw_cap", param);
-		if (unlikely(err)) {
-			WL_ERR(("Get bw_cap Failed (%d)\n", err));
-			return err;
+		if (chan->band == IEEE80211_BAND_5GHZ) {
+			param.band = WLC_BAND_5G;
+			err = wldev_iovar_getbuf(dev, "bw_cap", &param, sizeof(param),
+			                         cfg->ioctl_buf, WLC_IOCTL_SMLEN, &cfg->ioctl_buf_sync);
+			if (err) {
+				if (err != BCME_UNSUPPORTED) {
+					WL_ERR(("bw_cap failed, %d\n", err));
+					return err;
+				} else {
+					err = wldev_iovar_getint(dev, "mimo_bw_cap", &bw_cap);
+					if (err) {
+						WL_ERR(("error get mimo_bw_cap (%d)\n", err));
+					}
+					if (bw_cap != WLC_N_BW_20ALL)
+						bw_cap = WL_CHANSPEC_BW_40;
+				}
+			}
+			else {
+				if (WL_BW_CAP_80MHZ(cfg->ioctl_buf[0]))
+					bw_cap = WL_CHANSPEC_BW_80;
+				else if (WL_BW_CAP_40MHZ(cfg->ioctl_buf[0]))
+					bw_cap = WL_CHANSPEC_BW_40;
+				else
+					bw_cap = WL_CHANSPEC_BW_20;
+			}
 		}
-		bw_cap = param[0];
+		else if (chan->band == IEEE80211_BAND_2GHZ)
+			bw_cap = WL_CHANSPEC_BW_20;
+
 		chanspec = channel_to_chanspec(wiphy, dev, cfg->channel, bw_cap);
 	}
 	/*
@@ -2851,9 +2876,11 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 		}
 	}
 
-	join_params.params.chanspec_list[0] = chanspec;
-	join_params.params.chanspec_num = 1;
-	wldev_iovar_setint(dev, "chanspec", chanspec);
+	if (chan) {
+		join_params.params.chanspec_list[0] = chanspec;
+		join_params.params.chanspec_num = 1;
+		wldev_iovar_setint(dev, "chanspec", chanspec);
+	}
 	join_params_size = sizeof(join_params);
 
 	/* Disable Authentication, IBSS will add key if it required */

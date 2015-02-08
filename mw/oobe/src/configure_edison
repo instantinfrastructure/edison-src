@@ -28,6 +28,7 @@ from array import *
 
 DESTINATION_PATH = "/tmp/"
 STATE_DIR = '/var/lib/edison_config_tools' # todo: change in bitbake
+CURR_PACKAGE_PATH = ""
 
 class text_colors:
   CYAN = '\033[96m'
@@ -173,6 +174,7 @@ def verified(selection):
 
 def changeName(newName):
   _changeHostName(newName)
+  _changeP2PSSID(newName)
   _changeAPSSID(newName)
 
 def _changeHostName(newName):
@@ -184,6 +186,9 @@ def _changeHostName(newName):
 def _changeAPSSID(newName):
   os.popen("sed -i 's/^ssid=.*/ssid=%s/' /etc/hostapd/hostapd.conf" % (newName))
   subprocess.call("systemctl restart mdns && sleep 2", shell=True)
+
+def _changeP2PSSID(newName):
+  os.popen("sed -i 's/^p2p_ssid_postfix=.*/p2p_ssid_postfix=%s/' /etc/wpa_supplicant/p2p_supplicant.conf" % (newName))
 
 def changePassword(newPass):
   _changeRootPassword(newPass)
@@ -277,11 +282,12 @@ def scanForNetworks():
   os.popen("systemctl stop hostapd && sleep 2 && systemctl start wpa_supplicant")
   r = range(10,0,-1)
   for i in r:
-    stdout.write("Scanning: %s seconds left\r" % i)
+    stdout.write("Scanning: %s seconds left \r" % i)
     stdout.flush()
     if i == 6:
       os.popen("wpa_cli scan")
     time.sleep(1)
+
   data = os.popen("wpa_cli scan_results").read().split("\n")
 
   print "\n"
@@ -292,7 +298,7 @@ def scanForNetworks():
     line = data.pop().split("\t")
     if (len(line) == 5):
       ssid = line.pop()
-      if ssid not in ssid_keys and not ssid == "":
+      if ssid not in ssid_keys and not ssid == "" and "\\x00" not in ssid:
         tokens = line.pop().replace("[","").split("]")[0].split("-")
         if tokens[0] == "WPA" or tokens[0] == "WPA2":
           if tokens[1] == "EAP":
@@ -303,15 +309,28 @@ def scanForNetworks():
           network_map[ssid] = "WEP"
         else:
           network_map[ssid] = "OPEN"
+
         ssid_keys.append(ssid)
+
+  network_file = open(STATE_DIR + "/networks.txt", "w")
+  network_file.write("{\n")
+  for i in range(0, len(ssid_keys)):
+    network_file.write('\t"' + ssid_keys[i] + '": "' + network_map[ssid_keys[i]])
+    if i == len(ssid_keys)-1:
+        network_file.write('"\n')
+    else:
+        network_file.write('",\n')
+  network_file.write("}\n")
+  network_file.close()
 
   return (ssid_keys, network_map)
 
 
 def selectNetwork(ssid_keys):
-  i = 1
+  i = 2
   print "0 :\tRescan for networks"
-  print "1 :\tManually input a hidden SSID"
+  print "1 :\tExit WiFi Setup"
+  print "2 :\tManually input a hidden SSID"
   for ssid in ssid_keys:
     i = i + 1
     print i, ":\t", ssid
@@ -320,12 +339,12 @@ def selectNetwork(ssid_keys):
   choice = -1
   while 1:
     try:
-      if i == 1:
-        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to input a hidden network SSID: "))
-      elif i == 2:
-        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to input a hidden network SSID.\nEnter 2 to choose %s: " % ssid_keys[0]))
+      if i == 2:
+        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to exit.\nEnter 2 to input a hidden network SSID: "))
+      elif i == 3:
+        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to exit.\nEnter 2 to input a hidden network SSID.\nEnter 3 to choose %s: " % ssid_keys[0]))
       else:
-        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to input a hidden network SSID.\nEnter a number between 2 to %s to choose one of the listed network SSIDs: " % i))
+        choice = int(raw_input("\nEnter 0 to rescan for networks.\nEnter 1 to exit.\nEnter 2 to input a hidden network SSID.\nEnter a number between 3 to %s to choose one of the listed network SSIDs: " % i))
     except TypeError:
       choice = -1
     except ValueError:
@@ -334,8 +353,10 @@ def selectNetwork(ssid_keys):
     if choice == 0:
       break
     elif choice == 1:
+      sys.exit(0)
+    elif choice == 2:
       break
-    elif choice > 1 and choice <= i and verified(ssid_keys[choice-2]):
+    elif choice > 2 and choice <= i and verified(ssid_keys[choice-3]):
       break
   return choice
 
@@ -379,7 +400,7 @@ def configureHiddenNetwork(ssid):
 
 
 def configureNetwork(choice,ssid_keys,network_map):
-  ssid = ssid_keys[choice-2]
+  ssid = ssid_keys[choice-3]
   if network_map[ssid] == "OPEN":
     return wpa_templates.OPEN % (ssid, "")
   elif network_map[ssid] == "WEP":
@@ -488,7 +509,7 @@ def connectNetwork():
     choice = selectNetwork(ssid_keys)
 
     #choice is validated within selectNetwork.
-    if choice == 1:
+    if choice == 2:
       while 1:
           ssid = raw_input("Please enter the hidden network SSID: ")
           if verified(ssid):
@@ -497,7 +518,7 @@ def connectNetwork():
       break
     elif choice:
       network_conf = configureNetwork(choice, ssid_keys,network_map)
-      ssid = ssid_keys[choice-2]
+      ssid = ssid_keys[choice-3]
       break
 
   #print network_conf
@@ -528,7 +549,7 @@ def getCurrentFirmwareInfo():
     f = open('/etc/version','r')
     ver_str = f.readline()
     f.close()
-    return (ver_str.split('_')[0], ver_str.split('_')[2])
+    return ("edison-" + ver_str.split('-')[0], ver_str.split('-')[1].splitlines()[0])
 
 def parseFirmwareInfo(firmwareinfo, build_type):
     fwInfoObj = json.loads(firmwareinfo)
@@ -555,7 +576,7 @@ def getLatestFirmwareInfo():
         print >> sys.stderr, "Could not determine firmware version information."
         raise
 
-    build_url = "http://ndgfirmwareupdate-env.elasticbeanstalk.com/getLatestFirmwareUpdateURL?product=" + build_type
+    build_url = "http://software.wearables.intel.com/getLatestFirmwareUpdateURL?product=" + build_type
     request = urllib2.Request(build_url)
     request.add_header("Accept", "application/json")
     filehandle = urllib2.urlopen(request)
@@ -563,7 +584,7 @@ def getLatestFirmwareInfo():
     return parseFirmwareInfo(response, build_type)
 
 def getSpecificFirmwareInfo(build_type, build_number):
-    build_url = "http://ndgfirmwareupdate-env.elasticbeanstalk.com/getFirmwareUpdateURL?product=" + build_type + "&version=" + build_number
+    build_url = "http://software.wearables.intel.com/getFirmwareUpdateURL?product=" + build_type + "&version=" + build_number
     request = urllib2.Request(build_url)
     request.add_header("Accept", "application/json")
     filehandle = urllib2.urlopen(request)
@@ -589,14 +610,20 @@ def removeFolderContents(folder_path):
     return 0
 
 def removePackage():
+    global CURR_PACKAGE_PATH
     try:
-        os.remove(DESTINATION_PATH+"package.zip")
+        os.remove(CURR_PACKAGE_PATH)
     except Exception, e:
         pass
+    CURR_PACKAGE_PATH = ""
 
 def signal_term_handler(signal, handler):
     removePackage()
     removeFolderContents("/update")
+    sys.exit(0)
+
+def signal_term_handler_package_only(signal, handler):
+    removePackage()
     sys.exit(0)
 
 def err_downloadPackage():
@@ -648,13 +675,13 @@ def genSha1ForFile(file_path):
             buf = f.read(chunkSize)
     return sha.hexdigest()
 
-def downloadPackage(packageUrl, sha1FromServer):
-    ret_value = subprocess.call("curl --connect-timeout 10 "+ "'"+packageUrl+"'" + " >"+DESTINATION_PATH+"package.zip", shell=True)
+def downloadPackage(packageUrl, sha1FromServer, packagePath):
+    ret_value = subprocess.call("curl --connect-timeout 10 "+ "'"+packageUrl+"'" + " >"+packagePath, shell=True)
     if ret_value != 0:
         err_downloadPackage()
         return -1
 
-    shaOfDownloadedPkg = genSha1ForFile(DESTINATION_PATH + "package.zip")
+    shaOfDownloadedPkg = genSha1ForFile(packagePath)
 
     if sha1FromServer != shaOfDownloadedPkg:
         print "Could not establish integrity of downloaded firmware (hash mismatch). Unable to proceed"
@@ -663,23 +690,44 @@ def downloadPackage(packageUrl, sha1FromServer):
 
     return 0
 
-def doOTAFlash(packageUrl, sha1FromServer):
+def doOTAFlash(packageUrl, sha1FromServer, packagePath):
     if len(sha1FromServer) != 40:
         print "Could not establish integrity of latest firmware (bad hash). Unable to proceed."
         return -1
 
     try:
-            signal.signal(signal.SIGTERM, signal_term_handler)
+        signal.signal(signal.SIGTERM, signal_term_handler_package_only)
 
-            try:
-                ret_value = downloadPackage(packageUrl, sha1FromServer)
-                if ret_value != 0:
-                    return -1
-            except Exception as inst:
-                err_downloadPackage()
-                print >> sys.stderr, type(inst)
-                print >> sys.stderr, inst
+        try:
+            ret_value = downloadPackage(packageUrl, sha1FromServer, packagePath)
+            if ret_value != 0:
                 return -1
+        except Exception as inst:
+            err_downloadPackage()
+            print >> sys.stderr, type(inst)
+            print >> sys.stderr, inst
+            return -1
+
+        flashFile(packagePath)
+    except KeyboardInterrupt:
+        print ""
+        print "Interrupted by user. Cleaning up."
+        removePackage()
+        print "Please reboot the device to return to normal."
+    except Exception as inst:
+        print "Exception occurred while upgrading. Cleaning up."
+        print >> sys.stderr, type(inst)
+        print >> sys.stderr, inst
+        removePackage()
+        print "Please reboot the device to return to normal."
+
+def flashFile(packagePath):
+    if not os.path.isfile(packagePath):
+        print "Error: cannot upgrade. Package file " + packagePath + " does not exist."
+        return -1
+
+    try:
+            signal.signal(signal.SIGTERM, signal_term_handler)
 
             try:
                 ret_value = subprocess.call("mkdir -p /update", shell=True)
@@ -737,7 +785,7 @@ def doOTAFlash(packageUrl, sha1FromServer):
                     return -1
 
             try:
-                ret_value = subprocess.call("unzip -o " + DESTINATION_PATH + "package.zip -d /update", shell=True)
+                ret_value = subprocess.call("unzip -o " + packagePath + " -d /update", shell=True)
                 if ret_value != 0:
                     err_extractPackage()
                     return -1
@@ -785,7 +833,7 @@ def doOTAFlash(packageUrl, sha1FromServer):
         removeFolderContents("/update")
         print "Please reboot the device to return to normal."
 
-def upgrade():
+def upgrade(packagePath):
     curr = None
     build_type = None
 
@@ -802,15 +850,15 @@ def upgrade():
         raise
 
     if int(latest) > int(curr):
-        doOTAFlash(url, sha1)
+        doOTAFlash(url, sha1, packagePath)
     else:
         print "The latest version is already installed."
 
 def full():
-  reset("Device Name")
-  setEdisonHostname()
   reset("Device Password")
   setEdisonPassword()
+  reset("Device Name")
+  setEdisonHostname()
   if decideToConnect():
     connectNetwork()
     if not os.path.isfile(STATE_DIR + "/one-time-setup.done"):
@@ -822,11 +870,16 @@ def getSSID():
     return subprocess.check_output("grep -o '^ssid=.*' /etc/hostapd/hostapd.conf | awk -F'=' '{print $2}'", shell=True).strip()
 
 def enableOneTimeSetup():
+    subprocess.call("systemctl start blink-led && systemctl enable blink-led &> /dev/null", shell=True)
+
     hostname = subprocess.check_output('hostname').strip()
     try:
         os.remove(STATE_DIR + "/one-time-setup.done")
     except Exception as inst:
         print "Done."
+
+    print "Scanning and saving WiFi networks..."
+    scanForNetworks()
 
     print "Restarting WiFi access point. Please wait..."
     print ""
@@ -843,6 +896,13 @@ def enableOneTimeSetup():
     print "and visit",  "'" + hostname + ".local' in the browser"
 
 def disableOneTimeSetup():
+      try:
+        os.remove(STATE_DIR + "/networks.txt")
+      except Exception as inst:
+        pass
+
+      subprocess.call("systemctl stop blink-led && systemctl disable blink-led &> /dev/null", shell=True)
+
       if int(subprocess.check_output("systemctl status wpa_supplicant | grep 'active (running)' | wc -l", shell=True)) != 0:
         subprocess.call("systemctl disable hostapd &> /dev/null", shell=True)
       else:
@@ -860,6 +920,8 @@ def showNames():
     print '{"hostname": "' + hostname + '", "ssid": "' + ssid + '"}'
 
 def main():
+
+    global CURR_PACKAGE_PATH
 
     parser = argparse.ArgumentParser(prog='configure_edison')
 
@@ -881,6 +943,7 @@ def main():
     group_non_interactive.add_argument('--disableOneTimeSetup', dest='disableOneTimeSetup', help='Disable one-time setup and WiFi access point', action='store_true', default=False)
     group_non_interactive.add_argument('--enableOneTimeSetup', dest='enableOneTimeSetup', help='Enable one-time setup and WiFi access point', action='store_true', default=False)
     group_non_interactive.add_argument('--flash', metavar=('<version>','<release name>'), nargs='+', dest='otaflash', help='Downloads and flashes an image')
+    group_non_interactive.add_argument('--flashFile', metavar=('<image-file>'), nargs=1, dest='flashfile', help='Flashes the given image (.zip).')
     group_non_interactive.add_argument('--changePassword', metavar='password', dest='changepassword', const='', help=argparse.SUPPRESS, nargs='?')
     group_non_interactive.add_argument('--changeName', metavar='name', dest='changename', help=argparse.SUPPRESS, nargs=1)
     group_non_interactive.add_argument('--changeWiFi', metavar='securityType SSID [Identity | password]', dest='changewifi', help=argparse.SUPPRESS, nargs='+')
@@ -928,9 +991,12 @@ def main():
 
     if args.upgrade:
         try:
-            upgrade()
+            CURR_PACKAGE_PATH = DESTINATION_PATH + "package.zip"
+            upgrade(CURR_PACKAGE_PATH)
         except Exception as inst:
             print "Could not upgrade device firmware. Quitting."
+            print >> sys.stderr, type(inst)
+            print >> sys.stderr, inst
             return -1
 
     if args.shownames:
@@ -957,13 +1023,19 @@ def main():
             print "Could not retrieve required firmware information. Quitting."
             return -1
 
+        CURR_PACKAGE_PATH = DESTINATION_PATH + "package.zip"
+
         try:
-            doOTAFlash(url, sha1)
+            doOTAFlash(url, sha1, CURR_PACKAGE_PATH)
         except Exception as inst:
             print >> sys.stderr, type(inst)
             print >> sys.stderr, inst
             print "Could not flash device. Quitting."
             return -1
+
+    if args.flashfile != None:
+        CURR_PACKAGE_PATH = args.flashfile[0]
+        flashFile(CURR_PACKAGE_PATH)
 
     if args.changepassword != None:
         changePassword(args.changepassword)
