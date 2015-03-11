@@ -6,5 +6,7 @@ fast_reauth=1
 device_name=Edison
 manufacturer=Intel
 model_name=Edison
+p2p_ssid_postfix=-Edison
+persistent_reconnect=1
 
 
