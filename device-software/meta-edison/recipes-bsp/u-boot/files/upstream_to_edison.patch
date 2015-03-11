@@ -1,9 +1,9 @@
-From fa8789acf19e0653fb8c1f63cf0f117f85e1882d Mon Sep 17 00:00:00 2001
+From 084994e3140fb25fc9e0c96b48d03693bee7b28b Mon Sep 17 00:00:00 2001
 From: Jenkins <dswci@intel.com>
-Date: Tue, 14 Oct 2014 14:57:01 +0200
+Date: Fri, 30 Jan 2015 14:23:54 +0100
 Subject: [PATCH] Squashed all commits from upstream to Edison
 
-Change-Id: I92ad27d6a884ce741a255e2df02bdf99018512c8
+Change-Id: I1966c64a6433cfe814361fe44e46a8313db9e653
 ---
  Makefile                                       |    1 +
  arch/x86/config.mk                             |    4 +-
