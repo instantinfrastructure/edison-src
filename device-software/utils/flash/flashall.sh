@@ -6,25 +6,36 @@ IFS=$(echo -en "\n\b")
 
 GETOPTS="$(which getopt)"
 if [[ "$OSTYPE" == "darwin"* ]] ; then READLINK=greadlink; GETOPTS="$(brew list gnu-getopt | grep bin/getopt)"; else READLINK=readlink;fi;
-BASE_DIR="$(dirname $($READLINK -f $0))"
-ESC_BASE_DIR=${BASE_DIR/' '/'\ '}
+
+if [[ "$OSTYPE" == "cygwin" ]] ;
+then
+	TEMP_DIR="$(dirname $($READLINK -f $0))"
+	ESC_BASE_DIR="$(cygpath -m ${TEMP_DIR})"
+	BASE_DIR="$(cygpath -m ${TEMP_DIR})"
+else
+	BASE_DIR="$(dirname $($READLINK -f $0))"
+	ESC_BASE_DIR=${BASE_DIR/' '/'\ '}
+fi;
 
 USB_VID=8087
 USB_PID=0a99
 TIMEOUT_SEC=60
 
 DO_RECOVERY=0
-DO_DFU_FLASH=1
 # Phone Flash tools configuration files
 PFT_XML_FILE="${BASE_DIR}/pft-config-edison.xml"
 
 # Handle Ifwi file for DFU update
 IFWI_DFU_FILE=${ESC_BASE_DIR}/edison_ifwi-dbg
 
-DO_LIST_VARIANTS=0
 VAR_DIR="${BASE_DIR}/u-boot-envs"
-VARIANT_NAME_DEFAULT="edison-default"
-VARIANT_NAME_BLANK="edison-blank"
+if [[ "$OSTYPE" == "cygwin" ]] ; then
+	VARIANT_NAME_DEFAULT="edison-defaultrndis"
+	VARIANT_NAME_BLANK="edison-blankrndis"
+else
+	VARIANT_NAME_DEFAULT="edison-defaultcdc"
+	VARIANT_NAME_BLANK="edison-blankcdc"
+fi
 VARIANT_NAME=$VARIANT_NAME_BLANK
 
 LOG_FILENAME="flash.log"
@@ -32,21 +43,13 @@ OUTPUT_LOG_CMD="2>&1 | tee -a ${LOG_FILENAME} | ( sed -n '19 q'; head -n 1; cat 
 
 function print-usage {
 	cat << EOF
-Usage: ${0##*/} [-hl][--help][--recovery] [--keep-data] [-m][-ipdb] [-t uboot-env]
+Usage: ${0##*/} [-h][--help][--recovery] [--keep-data]
 Update all software and restore board to its initial state.
  -h,--help     display this help and exit.
  -v            verbose output
  --recovery    recover the board to DFU mode using a dedicated tool,
                available only on linux and window hosts.
  --keep-data   preserve user data when flashing.
-
-
- deprecated commands:
- -i            flash IFWI.
- -d            flash U-boot, U-boot Environment, Linux Kernel, Rootfs.
- -b            blank the device (eq -i -d -t ${VARIANT_NAME_BLANK}).
- -l            list availables U-boot target environments and exit.
- -t uboot-env  specify U-boot target environments to flash (default is ${VARIANT_NAME}).
 EOF
 	exit -5
 }
@@ -117,7 +120,9 @@ function flash-ifwi-xfstk {
 
 function dfu-wait {
 	echo "Now waiting for dfu device ${USB_VID}:${USB_PID}"
-	echo "Please plug and reboot the board"
+	if [ -z "$@" ]; then
+		echo "Please plug and reboot the board"
+        fi
 	while [ `dfu-util -l -d ${USB_VID}:${USB_PID} | grep Found | grep -c ${USB_VID}` -eq 0 ] \
 		&& [ $TIMEOUT_SEC -gt 0 ] && [ $(( TIMEOUT_SEC-- )) ];
 	do
@@ -128,47 +133,31 @@ function dfu-wait {
 	then
 		echo "Timed out while waiting for dfu device ${USB_VID}:${USB_PID}"
 		flash-debug
-		echo "Did you plug and reboot your board?"
-		echo "If yes, please try a recovery by calling this script with the --recovery option"
+		if [ -z "$@" ]; then
+			echo "Did you plug and reboot your board?"
+			echo "If yes, please try a recovery by calling this script with the --recovery option"
+                fi
 		exit -2
 	fi
 }
 
 # Execute old getopt to have long options support
-ARGS=$($GETOPTS -o hvlt:eidb -l "keep-data,recovery,help" -n "${0##*/}" -- "$@");
+ARGS=$($GETOPTS -o hv -l "keep-data,recovery,help" -n "${0##*/}" -- "$@");
 #Bad arguments
 if [ $? -ne 0 ]; then print-usage ; fi;
 eval set -- "$ARGS";
 
 while true; do
 	case "$1" in
-		-l) shift; DO_LIST_VARIANTS=1;;
-		-t) shift; if [ -n "$1" ]; then VARIANT_NAME=$1; shift; fi;;
 		-h|--help) shift; print-usage;;
 		-v) shift; OUTPUT_LOG_CMD=" 2>&1 | tee -a ${LOG_FILENAME}";;
-		-i) shift; DO_RECOVERY=1;;
-		-d) shift; DO_DFU_FLASH=1;;
-		-b) shift; DO_RECOVERY=1; DO_DFU_FLASH=1; VARIANT_NAME=$VARIANT_NAME_BLANK;;
-		--recovery) shift; DO_RECOVERY=1;DO_DFU_FLASH=0;;
-		--keep-data) shift; DO_RECOVERY=0; VARIANT_NAME=$VARIANT_NAME_DEFAULT;;
+		--recovery) shift; DO_RECOVERY=1;;
+		--keep-data) shift; VARIANT_NAME=$VARIANT_NAME_DEFAULT;;
 		--) shift; break;;
 	esac
 done
 
-if [ ${DO_LIST_VARIANTS} -eq 1 ];
-then
-	echo "Availables U-boot targets:"
-	for variant in $(ls ${VAR_DIR}) ; do
-		#echo just filname without extension
-		echo "${variant%.*}"
-	done
-	exit -5
-fi
-
-if [[ ${DO_RECOVERY} -eq 1 || ${DO_DFU_FLASH} -eq 1 ]];
-then
-	echo "** Flashing Edison Board $(date) **" >> ${LOG_FILENAME}
-fi
+echo "** Flashing Edison Board $(date) **" >> ${LOG_FILENAME}
 
 
 if [ ${DO_RECOVERY} -eq 1 ];
@@ -189,10 +178,8 @@ then
 	flash-ifwi
 	echo "Recovery Success..."
 	echo "You can now try a regular flash"
-fi
 
-if [ ${DO_DFU_FLASH} -eq 1 ];
-then
+else
 	echo "Using U-Boot target: ${VARIANT_NAME}"
 	VARIANT_FILE="${VAR_DIR}/${VARIANT_NAME}.bin"
 	if [ ! -f "${VARIANT_FILE}" ]; then
@@ -233,7 +220,9 @@ then
 	flash-command --alt u-boot-env0 -D "${VARIANT_FILE}"
 
 	echo "Flashing U-Boot Environment Backup"
-	flash-command --alt u-boot-env1 -D "${VARIANT_FILE}"
+	flash-command --alt u-boot-env1 -D "${VARIANT_FILE}" -R
+        echo "Rebooting to apply partition changes"
+	dfu-wait no-prompt
 
 	echo "Flashing boot partition (kernel)"
 	flash-command --alt boot -D "${ESC_BASE_DIR}/edison-image-edison.hddimg"
@@ -244,14 +233,8 @@ then
 	echo "Rebooting"
 	echo "U-boot & Kernel System Flash Success..."
 	if [ $VARIANT_NAME == $VARIANT_NAME_BLANK ] ; then
-		echo "Your board needs to reboot twice to complete the flashing procedure, please do not unplug it for 2 minutes."
+		echo "Your board needs to reboot to complete the flashing procedure, please do not unplug it for 2 minutes."
 	fi
-fi
-
-if [[ ${DO_DFU_FLASH} -eq 0 &&  ${DO_RECOVERY} -eq 0 ]];
-then
-	echo "Nothing to do ..."
-	print-usage
 fi
 
 IFS=${BACKUP_IFS}
