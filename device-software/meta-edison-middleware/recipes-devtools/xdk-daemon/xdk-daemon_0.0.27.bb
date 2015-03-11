@@ -6,6 +6,8 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=8a05f85865f8c4b9ba29798e539f93b7"
 DEPENDS = "nodejs-native mdns"
 RDEPENDS_${PN} = "libarchive-bin"
 
+PR = "r0"
+
 # URI should point to some external http:// server
 SRC_URI = "file://xdk-daemon-${PV}.tar.bz2"
 
@@ -50,7 +52,6 @@ do_install () {
 
     install -d ${D}${systemd_unitdir}/system/
     install -m 0644 ${S}/xdk-daemon.service ${D}${systemd_unitdir}/system/
-    install -d ${D}/node_app_slot/
 
     install -d ${D}${bindir}
     ln -s /opt/xdk-daemon/current/xdk-whitelist ${D}${bindir}/xdk-whitelist
@@ -62,7 +63,6 @@ SYSTEMD_SERVICE_${PN} = "xdk-daemon.service"
 
 FILES_${PN} = "/opt/xdk-daemon/ \
                ${systemd_unitdir}/system/xdk-daemon.service \
-               /node_app_slot/ \
                ${bindir}/"
 
 PACKAGES = "${PN}"
