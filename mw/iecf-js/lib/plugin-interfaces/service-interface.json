@@ -1,3 +1,0 @@
-{
-  "functions": ["sendTo", "publish", "manageClient", "setReceivedMessageHandler", "done"]
-}

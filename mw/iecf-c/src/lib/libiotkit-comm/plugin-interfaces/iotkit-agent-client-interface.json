@@ -1,3 +1,0 @@
-{
-    "functions": ["registerSensor", "send", "subscribe", "unsubscribe", "receive", "done"]
-}
