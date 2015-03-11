@@ -1,10 +1,10 @@
 DESCRIPTION="The out-of-box configuration service"
-LICENSE = "LGPLv2.1"
+LICENSE = "MIT"
 
 S = "${EDISONREPO_TOP_DIR}/mw/oobe"
 
 LIC_FILES_CHKSUM = " \
-        file://LICENSE;md5=1a6d268fd218675ffea8be556788b780 \
+        file://LICENSE;md5=ea398a763463b76b18da15f013c0c531 \
 "
 
 DEPENDS = "nodejs-native"
