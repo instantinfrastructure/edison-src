@@ -20,8 +20,11 @@ do_install() {
     install -m 0755 ${S}/scripts/wfa_stop_ping ${D}/usr/sbin
     install -m 0755 ${S}/scripts/wfa_start_dhcp_client ${D}/usr/sbin
     install -m 0755 ${S}/scripts/wfa_stop_dhcp_client ${D}/usr/sbin
+    install -m 0755 ${S}/scripts/wfa_start_dhcp_server ${D}/usr/sbin
+    install -m 0755 ${S}/scripts/wfa_stop_dhcp_server ${D}/usr/sbin
 
     install -v -d ${D}${sysconfdir}/sigma
+    install -m 644 ${S}/scripts/udhcpd.conf ${D}${sysconfdir}/sigma
     install -m 644 ${S}/certificates/cas.pem ${D}${sysconfdir}/sigma
     install -m 644 ${S}/certificates/root.pem  ${D}${sysconfdir}/sigma
     install -m 644 ${S}/certificates/wifiuser.pem ${D}${sysconfdir}/sigma
