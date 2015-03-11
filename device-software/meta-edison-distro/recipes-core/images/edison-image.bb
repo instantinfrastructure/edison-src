@@ -49,7 +49,8 @@ IMAGE_INSTALL += "connman-tools"
 IMAGE_INSTALL += "wireless-tools"
 IMAGE_INSTALL += "wpa-supplicant"
 IMAGE_INSTALL += "hostapd-daemon"
-IMAGE_INSTALL += "bluez5"
+IMAGE_INSTALL += "bluez5-dev"
+IMAGE_INSTALL += "bluez5-obex"
 IMAGE_INSTALL += "kernel-modules"
 IMAGE_INSTALL += "ethtool"
 IMAGE_INSTALL += "iptables"
@@ -72,6 +73,13 @@ IMAGE_INSTALL += "ota-update"
 
 # Allows to enable OpenMP feature
 IMAGE_INSTALL += "libgomp"
+
+# Add audio firmware
+IMAGE_INSTALL += "sst-fw-bin"
+
+# ALSA lib and utilities
+IMAGE_INSTALL += "alsa-lib"
+IMAGE_INSTALL += "alsa-utils-alsamixer alsa-utils-alsactl alsa-utils-aplay alsa-utils-amixer"
 
 # Python and some basic modules
 IMAGE_INSTALL += "python"
@@ -96,6 +104,12 @@ IMAGE_INSTALL += "tcpdump"
 IMAGE_INSTALL += "net-tools"
 IMAGE_INSTALL += "lsof"
 IMAGE_INSTALL += "iperf"
+
+# Add pulseaudio
+IMAGE_INSTALL += "pulseaudio-server libpulsecore libpulsecommon libpulse libpulse-simple pulseaudio-misc pulseaudio-service"
+
+# Add Mplayer
+IMAGE_INSTALL += "mplayer"
 
 # Those are necessary to manually create partitions and file systems on the eMMC
 IMAGE_INSTALL += "parted"
