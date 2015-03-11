@@ -1,28 +1,33 @@
 DESCRIPTION = "Bonjour, also known as zero-configuration networking, enables automatic discovery of computers, devices, and services on IP networks."
 HOMEPAGE = "http://developer.apple.com/networking/bonjour/"
 LICENSE = "Apache-2.0"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=31c50371921e0fb731003bbc665f29bf"
 
-S = "${EDISONREPO_TOP_DIR}/mw/mdns"
+PR = "r1"
 
-SRC_URI = "file://mdns.service"
-
-LIC_FILES_CHKSUM = " \
-        file://LICENSE;md5=31c50371921e0fb731003bbc665f29bf \
+SRC_URI = "http://opensource.apple.com/tarballs/mDNSResponder/mDNSResponder-${PV}.tar.gz \
+           file://build.patch \
+           file://mdns.service \
 "
+
+SRC_URI[md5sum] = "39142ab70bd82a096801ce346f86cbab"
+SRC_URI[sha256sum] = "c6ad1d53c28d28c0e3689bdf5efd9ce6f5c4c3692e8ad76e5eeb4d0c248929ac"
 
 PARALLEL_MAKE = ""
 
+S = "${WORKDIR}/mDNSResponder-544"
+
 do_compile() {
     cd mDNSPosix
-    oe_runmake os=linux
+    oe_runmake os=linux DEBUG=0
 }
 
 do_install () {
     install -d ${D}${sbindir}
-    install -m 0755 mDNSPosix/build/debug/mdnsd ${D}${sbindir}
+    install -m 0755 mDNSPosix/build/prod/mdnsd ${D}${sbindir}
 
     install -d ${D}${libdir}
-    cp mDNSPosix/build/debug/libdns_sd.so ${D}${libdir}/libdns_sd.so.1
+    cp mDNSPosix/build/prod/libdns_sd.so ${D}${libdir}/libdns_sd.so.1
     chmod 0644 ${D}${libdir}/libdns_sd.so.1
     ln -s libdns_sd.so.1 ${D}${libdir}/libdns_sd.so
 
@@ -36,7 +41,7 @@ do_install () {
     install -m 0755  Clients/build/dns-sd ${D}${bindir}
 
     install -d ${D}${libdir}
-    oe_libinstall -C mDNSPosix/build/debug -so libnss_mdns-0.2 ${D}${libdir}
+    oe_libinstall -C mDNSPosix/build/prod -so libnss_mdns-0.2 ${D}${libdir}
     ln -s libnss_mdns-0.2.so ${D}${libdir}/libnss_mdns.so.2
 
     install -d ${D}${sysconfdir}
