@@ -33,14 +33,15 @@ DISTRO = "poky-edison"
 USER_CLASSES ?= "buildstats image-mklibs image-prelink"
 PATCHRESOLVE = "noop"
 CONF_VERSION = "1"
-EDISONREPO_TOP_DIR = "$my_dir"
+EDISONREPO_TOP_DIR = "$top_repo_dir"
 DL_DIR ?= "$my_dl_dir"
 SSTATE_DIR ?= "$my_sstate_dir"
 BUILDNAME = "$my_build_name"
 LICENSE_FLAGS_WHITELIST += "commercial"
 COPY_LIC_MANIFEST = "1"
 COPY_LIC_DIRS = "1"
-FILESYSTEM_PERMS_TABLES = "$my_dir/device-software/meta-edison-distro/files/fs-perms.txt"
+FILESYSTEM_PERMS_TABLES = "$top_repo_dir/device-software/meta-edison-distro/files/fs-perms.txt"
+$extra_package_type
 $extra_archiving
 $extra_conf
 EOF
@@ -69,11 +70,11 @@ BBLAYERS ?= " \\
   $poky_dir/meta \\
   $poky_dir/meta-yocto \\
   $poky_dir/meta-yocto-bsp \\
-  $my_dir/device-software/meta-edison \\
-  $my_dir/device-software/meta-edison-distro \\
-  $my_dir/device-software/meta-edison-middleware \\
-  $my_dir/device-software/meta-edison-arduino \\
-  $my_dir/device-software/meta-edison-devtools \\
+  $top_repo_dir/device-software/meta-edison \\
+  $top_repo_dir/device-software/meta-edison-distro \\
+  $top_repo_dir/device-software/meta-edison-middleware \\
+  $top_repo_dir/device-software/meta-edison-arduino \\
+  $top_repo_dir/device-software/meta-edison-devtools \\
   $extra_layers
   "
 BBLAYERS_NON_REMOVABLE ?= " \\
@@ -116,7 +117,8 @@ function usage()
 }
 
 main() {
-  my_dir=$(dirname $(dirname $(readlink -f $0)))
+  top_repo_dir=$(dirname $(dirname $(readlink -f $0)))
+  my_build_dir=$top_repo_dir
   my_dl_dir="\${TOPDIR}/downloads"
   my_sstate_dir="\${TOPDIR}/sstate-cache"
   my_bb_number_thread=4
@@ -135,7 +137,7 @@ main() {
   my_sdk_host="$plat$arch"
 
   my_mode="external"
-  if [ -d "$my_dir/linux-kernel" ]; then
+  if [ -d "$top_repo_dir/linux-kernel" ]; then
     my_mode="devenv"
   fi
 
@@ -173,6 +175,9 @@ COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
       --build_name)
         my_build_name=$VALUE
         ;;
+      --build_dir)
+        my_build_dir=$VALUE
+        ;;
       -l | --list_sdk_hosts)
         echo $all_sdk_hosts
         exit
@@ -195,7 +200,7 @@ COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
     echo "We are building in devenv mode, i.e. with dependency on teamforge internal servers"
     echo "and yocto recipes assuming local sources for some package."
     echo "You can change this by passing the --mode=external option to this script."
-    do_append_layer 
+    do_append_layer $top_repo_dir/device-software/meta-edison-devenv
   else
     if [ "$my_mode" = "external" ]
     then
@@ -228,38 +233,39 @@ COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
       ;;
   esac
 
-  poky_dir=$my_dir/poky
+  poky_dir=$my_build_dir/poky
 
   # Re-create the poky dir from archive
-  echo "Extracting upstream Yocto tools in the poky/ directory from archive"
+  echo "Extracting upstream Yocto tools in the $poky_dir directory from archive"
   rm -rf $poky_dir
-  tar -xjf $my_dir/device-software/utils/poky-daisy-11.0.0.tar.bz2
-  mv poky-daisy-11.0.0 $poky_dir
+  tar -xjf $top_repo_dir/device-software/utils/poky-daisy-11.0.1.tar.bz2
+  mv poky-daisy-11.0.1 $poky_dir
 
   # Apply patch on top of it allowing to perform build in external source directory
   #echo "Applying patch on it"
   cd $poky_dir
-  git apply --whitespace=nowarn $my_dir/device-software/utils/fix-gcc49-binutils.patch 
-  git apply $my_dir/device-software/utils/0001-kernel-kernel-yocto-fix-external-src-builds-when-S-B-poky-dora.patch
-  git apply $my_dir/device-software/utils/gcc-Clean-up-configure_prepend-and-fix-for-mingw.patch
-  git apply $my_dir/device-software/utils/sdk-populate-clean-broken-links.patch
-  git apply $my_dir/device-software/utils/fix-sshd-varloglastlog-warning.patch
-  git apply --whitespace=nowarn $my_dir/device-software/utils/0001-bash-fix-CVE-2014-6271.patch
-  git apply --whitespace=nowarn $my_dir/device-software/utils/0002-bash-Fix-CVE-2014-7169.patch
+  git apply $top_repo_dir/device-software/utils/0001-kernel-kernel-yocto-fix-external-src-builds-when-S-B-poky-dora.patch
+  git apply $top_repo_dir/device-software/utils/sdk-populate-clean-broken-links.patch
+  git apply --whitespace=nowarn $top_repo_dir/device-software/utils/0001-bash-fix-CVE-2014-6271.patch
+  git apply --whitespace=nowarn $top_repo_dir/device-software/utils/0002-bash-Fix-CVE-2014-7169.patch
+  git apply $top_repo_dir/device-software/utils/0001-libarchive-avoid-dependency-on-e2fsprogs.patch
+  git apply --whitespace=nowarn $top_repo_dir/device-software/utils/0001-busybox-handle-syslog-related-files-properly.patch
+  git apply $top_repo_dir/device-software/utils/0001-openssh-avoid-screen-sessions-being-killed-on-discon.patch
+  git apply $top_repo_dir/device-software/utils/handle_bash_func.patch
 
   mingw_dir=$poky_dir/meta-mingw
   echo "Unpacking Mingw layer to poky/meta-mingw/ directory from archive"
   mkdir -p $mingw_dir
-  ( cd $mingw_dir && tar -xjf $my_dir/device-software/utils/mingw-daisy.tar.bz2)
+  ( cd $mingw_dir && tar -xjf $top_repo_dir/device-software/utils/mingw-daisy.tar.bz2)
 
   darwin_dir=$poky_dir/meta-darwin
   echo "Unpacking Darwin layer to poky/meta-darwin/ directory from archive"
   mkdir -p $darwin_dir
-  ( cd $darwin_dir && tar -xjf $my_dir/device-software/utils/darwin-daisy.tar.bz2)
+  ( cd $darwin_dir && tar -xjf $top_repo_dir/device-software/utils/darwin-daisy.tar.bz2)
 
   if [[ $my_sdk_host == win* ]]
   then
-    do_append_layer $my_dir/device-software/meta-mingw
+    do_append_layer $top_repo_dir/device-software/meta-mingw
     do_append_layer $mingw_dir
   fi
 
@@ -269,9 +275,9 @@ COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
   fi
 
   echo "Initializing yocto build environment"
-  source oe-init-build-env $my_dir/build > /dev/null
+  source oe-init-build-env $my_build_dir/build > /dev/null
 
-  yocto_conf_dir=$my_dir/build/conf
+  yocto_conf_dir=$my_build_dir/build/conf
 
   echo "Setting up yocto configuration file (in build/conf/local.conf)"
   do_bblayers_conf
@@ -280,6 +286,7 @@ COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
   echo "** Success **"
   echo "SDK will be generated for $my_sdk_host host"
   echo "Now run these two commands to setup and build the flashable image:"
+  echo "cd $my_build_dir"
   echo "source poky/oe-init-build-env"
   echo "bitbake edison-image"
   echo "*************"
