@@ -22,6 +22,7 @@
 #define MAX_ARGS 0x20
 
 #define CL_LOADER_CMD_HOST_START_DOWNLOAD_CMD "~sketch download"
+#define downloadCMD "~sketch downloadEdison"
 
 #define CL_LOADER_CMD_STARTCHAR '#'
 #define CL_LOADER_CMD_START_SKETCH_APP "#Start Sketch:" /* filename args and exec i/o wrapper */
