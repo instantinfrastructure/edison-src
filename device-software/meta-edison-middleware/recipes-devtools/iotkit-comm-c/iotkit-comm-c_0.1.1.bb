@@ -1,10 +1,10 @@
 DESCRIPTION = "Inter of Things communication library for device-to-device and device-to-cloud messaging"
-LICENSE = "LGPLv2.1"
+LICENSE = "MIT"
 
 S = "${EDISONREPO_TOP_DIR}/mw/iecf-c"
 
 LIC_FILES_CHKSUM = " \
-        file://LICENSE;md5=1a6d268fd218675ffea8be556788b780 \
+        file://COPYING;md5=e8db6501ed294e65418a933925d12058 \
 "
 
 DEPENDS = "zeromq mdns paho-mqtt"
