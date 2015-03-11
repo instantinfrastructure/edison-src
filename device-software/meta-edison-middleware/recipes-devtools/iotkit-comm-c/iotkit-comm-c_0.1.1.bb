@@ -1,11 +1,16 @@
 DESCRIPTION = "Inter of Things communication library for device-to-device and device-to-cloud messaging"
 LICENSE = "MIT"
 
-S = "${EDISONREPO_TOP_DIR}/mw/iecf-c"
+PR = "r2"
+
+SRC_URI = "git://github.com/intel-iot-devkit/iotkit-comm-c.git;protocol=git"
+SRCREV = "2367175b07852a8d2600677f5d893af49973f422"
 
 LIC_FILES_CHKSUM = " \
         file://COPYING;md5=e8db6501ed294e65418a933925d12058 \
 "
+
+S = "${WORKDIR}/git"
 
 DEPENDS = "zeromq mdns paho-mqtt"
 
@@ -33,7 +38,9 @@ do_install() {
     install -d ${D}${libdir}
     install ${B}/lib/libiotkit-comm/libiotkit-comm.so ${D}${libdir}/
     install ${B}/lib/plugins/libiotkitpubsub/libiotkit-agent-client.so ${D}${libdir}/
+    install ${B}/lib/plugins/libiotkitpubsub/libiotkit-agent-service.so ${D}${libdir}/
     install ${B}/lib/plugins/libmqttpubsub/libmqttpubsub-client.so ${D}${libdir}/
+    install ${B}/lib/plugins/libmqttpubsub/libmqttpubsub-service.so ${D}${libdir}/
     install ${B}/lib/plugins/libzmqpubsub/libzmqpubsub-client.so ${D}${libdir}/
     install ${B}/lib/plugins/libzmqpubsub/libzmqpubsub-service.so ${D}${libdir}/
     install ${B}/lib/plugins/libzmqreqrep/libzmqreqrep-client.so ${D}${libdir}/
@@ -97,10 +104,10 @@ do_install() {
 }
 
 FILES_${PN} += "${libdir}"
-RDEPENDS_${PN} = "zeromq mdns paho-mqtt rsmb"
+RDEPENDS_${PN} = "zeromq mdns paho-mqtt mosquitto sshpass"
 
 PACKAGES += "${PN}-tests"
-RDEPENDS_${PN}-tests += "${PN} gcov"
+RDEPENDS_${PN}-tests += "${PN} gcov cmake"
 
 FILES_${PN}-dev = "${includedir} ${datadir}/iotkit-comm/examples/c/"
 FILES_${PN}-dbg += "${datadir}/iotkit-comm/examples/c/.debug/ ${datadir}/iotkit-comm/tests/c/iotkitpubsub/.debug/ ${datadir}/iotkit-comm/tests/c/mqttpubsub/.debug/ ${datadir}/iotkit-comm/tests/c/zmqpubsub/.debug/ ${datadir}/iotkit-comm/tests/c/libiotkit-comm/.debug/ ${datadir}/iotkit-comm/tests/c/zmqreqrep/.debug/"
