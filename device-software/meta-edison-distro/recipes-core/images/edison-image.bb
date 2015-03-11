@@ -58,15 +58,15 @@ IMAGE_INSTALL += "libstdc++"
 IMAGE_INSTALL += "u-boot"
 IMAGE_INSTALL += "u-boot-fw-utils"
 IMAGE_INSTALL += "file"
-IMAGE_INSTALL += "otg"
 IMAGE_INSTALL += "pciutils"
 IMAGE_INSTALL += "usbutils"
 IMAGE_INSTALL += "ldd"
 IMAGE_INSTALL += "i2c-tools"
 IMAGE_INSTALL += "watchdog-sample"
 IMAGE_INSTALL += "pwr-button-handler"
-IMAGE_INSTALL += "libwebsockets"
+IMAGE_INSTALL += "blink-led"
 IMAGE_INSTALL += "first-install"
+IMAGE_INSTALL += "resize-rootfs"
 IMAGE_INSTALL += "systemd-analyze"
 IMAGE_INSTALL += "wget"
 IMAGE_INSTALL += "ota-update"
@@ -84,7 +84,7 @@ IMAGE_INSTALL += "alsa-utils-alsamixer alsa-utils-alsactl alsa-utils-aplay alsa-
 # Python and some basic modules
 IMAGE_INSTALL += "python"
 IMAGE_INSTALL += "python-dbus python-smartpm python-pygobject python-argparse"
-IMAGE_INSTALL += "python-distutils python-pkgutil python-audio python-image python-imaging python-email python-netserver python-xmlrpc python-ctypes python-html python-json python-compile python-misc python-numbers python-unittest"
+IMAGE_INSTALL += "python-distutils python-pkgutil python-audio python-image python-imaging python-email python-netserver python-xmlrpc python-ctypes python-html python-json python-compile python-misc python-numbers python-unittest python-pydoc"
 
 # Wifi firmware
 IMAGE_INSTALL += "bcm43340-fw"
@@ -98,6 +98,9 @@ IMAGE_INSTALL += "bcm43340-mod"
 # Provides strace and gdb
 IMAGE_FEATURES += "tools-debug"
 IMAGE_INSTALL += "crashlog"
+
+# Clean corrupted journald entries
+IMAGE_INSTALL += "cleanjournal"
 
 # Adds various other tools
 IMAGE_INSTALL += "tcpdump"
@@ -120,3 +123,8 @@ IMAGE_INSTALL += "tzdata"
 
 # SWIG
 IMAGE_INSTALL += "swig"
+
+# INTEL MCU FW
+IMAGE_INSTALL += "mcu-fw-load"
+IMAGE_INSTALL += "mcu-fw-bin"
+
