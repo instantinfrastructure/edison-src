@@ -3,11 +3,12 @@ var
   fs = require('fs'),
   qs = require('querystring'),
   exec = require('child_process').exec,
-  url = require('url');
+  url = require('url'),
+  multiparty = require('multiparty');
 
 var site = __dirname + '/public';
-var payload, urlobj;
-var injectStatusAfter = '<h1>Edison One-time Setup</h1></a>';
+var urlobj;
+var injectStatusAfter = '<!-- errors will go here -->';
 var injectPasswordSectionAfter = 'onsubmit="saveFields()">';
 var supportedExtensions = {
   "css"   : "text/css",
@@ -22,8 +23,9 @@ var supportedExtensions = {
   "jpeg"  : "image/jpeg",
   "jpg"   : "image/jpeg",
   "png"   : "image/png"
-}
+};
 var STATE_DIR = '/var/lib/edison_config_tools';
+var NETWORKS_FILE = STATE_DIR + '/networks.txt';
 
 function getContentType(filename) {
   var i = filename.lastIndexOf('.');
@@ -38,9 +40,9 @@ function injectStatus(in_text, statusmsg, iserr) {
   var status = "";
   if (statusmsg) {
     if (iserr)
-      status = '<div class="status errmsg">' + statusmsg + '</div>';
+      status = '<div id="statusarea" name="statusarea" class="status errmsg">' + statusmsg + '</div>';
     else
-      status = '<div class="status">' + statusmsg + '</div>';
+      status = '<div id="statusarea" name="statusarea" class="status">' + statusmsg + '</div>';
   }
   return in_text.substring(0, injectStatusAt) + status + in_text.substring(injectStatusAt, in_text.length);
 }
@@ -188,9 +190,50 @@ function submitForm(params, res, req) {
 }
 
 function handlePostRequest(req, res) {
-  var params = qs.parse(payload);
   if (urlobj.pathname === '/submitForm') {
-    submitForm(params, res, req);
+    var payload = "";
+    req.on('data', function (data) {
+      payload += data;
+    });
+    req.on('end', function () {
+      var params = qs.parse(payload);
+      submitForm(params, res, req);
+    });
+  } else if (urlobj.pathname === '/submitFirmwareImage') {
+    var form = new multiparty.Form();
+
+    form.parse(req, function(err, fields, files) {
+      console.log(files);
+      console.log('Upload completed!');
+
+      if (err) {
+        res.end(injectStatus(fs.readFileSync(site + '/upgrade.html', {encoding: 'utf8'}),
+          "File upload failed. Please try again.", true));
+      } else {
+        var exitupgradeStr = fs.readFileSync(site + '/exit-upgrade.html', {encoding: 'utf8'});
+        var currversion;
+        exec('configure_edison --version ',
+          function (error, stdout, stderr) {
+            if (error) {
+              currversion = "unknown";
+            } else {
+              currversion = stdout;
+            }
+            exitupgradeStr = exitupgradeStr.replace(/params_version/g, currversion);
+            res.end(exitupgradeStr);
+
+            exec('configure_edison --flashFile ' + files.imagefile[0].path,
+              function (error, stdout, stderr) {
+                if (error) {
+                  console.log("Upgrade error: ");
+                  console.log(stderr);
+                  return;
+                }
+                console.log(stdout);
+              });
+          });
+      }
+    });
   } else {
     pageNotFound(res);
   }
@@ -201,16 +244,10 @@ function handlePostRequest(req, res) {
 function requestHandler(req, res) {
 
   urlobj = url.parse(req.url, true);
-  payload = "";
 
   // POST request. Get payload.
   if (req.method === 'POST') {
-    req.on('data', function (data) {
-      payload += data;
-    });
-    req.on('end', function () {
-      handlePostRequest(req, res);
-    });
+    handlePostRequest(req, res);
     return;
   }
 
@@ -250,6 +287,14 @@ function requestHandler(req, res) {
       });
     } else {
       res.end(getStateBasedIndexPage());
+    }
+  } else if (urlobj.pathname === '/wifiNetworks') {
+    if (fs.existsSync(NETWORKS_FILE)) {
+      res.setHeader('content-type', getContentType(NETWORKS_FILE));
+      res.end(fs.readFileSync(NETWORKS_FILE, {encoding: 'utf8'}));
+    } else {
+      res.statusCode = 404;
+      res.end("Please try again later.");
     }
   } else { // for files like .css and images.
     if (!fs.existsSync(site + urlobj.pathname)) {

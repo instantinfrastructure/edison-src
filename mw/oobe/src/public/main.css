@@ -8,7 +8,6 @@ body {
 }
 
 h1 {
-    margin: 0px;
     color: gray;
     font-size: 48px;
     line-height: 76px;
@@ -21,6 +20,25 @@ h1 {
     text-align: center;
     margin: 2px auto;
     width: 1000px;
+}
+
+.menu {
+    color: black;
+    background-color: #e3e3e3;
+    width: 1000px;
+    height: 30px;
+    margin: 2px auto;
+}
+
+.menuitem {
+    font-size: 14px;
+    font-weight: bold;
+    width: 80px;
+    height: 25px;
+    line-height: 25px;
+    text-align: center;
+    padding: 0px;
+    margin: 0px;
 }
 
 .status {
@@ -167,4 +185,14 @@ label {
 
 .infoline_right {
     text-align: left;
+}
+
+.linkbutton {
+    text-align: left;
+    color: blue;
+    background: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    cursor: pointer;
 }
