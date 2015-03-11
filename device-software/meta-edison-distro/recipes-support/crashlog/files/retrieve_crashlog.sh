@@ -34,32 +34,65 @@
 #
 
 ipanic_console_path=/proc/emmc_ipanic_console
-crashlog_path=/home/root/
+crashlog_path=/home/root
 
 # line containing 'WAKESRC' looks like:
-# '[    0.530153] [BOOT] WAKESRC=[real reset] (osnib)'
-# wakesrc is the 6th field with [ and ] separators
+# 'Jan 01 00:00:12 edison kernel: [BOOT] WAKESRC=[real reset] (osnib)'
+# wakesrc is the 4th field with [ and ] separators
 # List of available wake sources is in driver/platform/x86/intel_scu_ipcutil.c
 
-wakesrc=`dmesg | grep WAKESRC | awk -F'[][]' '{print $6}'`
+wakesrc=$(journalctl -k -b -0 | grep WAKESRC | awk -F'[][]' '{print $4}')
 
 # any watchdog boot implies a crash
-tmp=`echo -n "${wakesrc}" | grep watchdog`
+tmp=$(echo -n "${wakesrc}" | grep watchdog)
 if [ -n "${tmp}" ]; then
-	# get the last sequence number (ie for crashlog_00001, get the 1)
-	last_file_sequence_number=`ls ${crashlog_path}/crashlog_* | tail -1 | awk -F_ '{print $NF}'`
-	if [ -z $last_file_sequence_number ]; then
-		last_file_sequence_number="0"
-	fi
+    # get the last sequence number (ie for crashlog_00001, get the 1)
+    last_sequence_number=$(ls ${crashlog_path}/crashlog_* | tail -1 | awk -F_ '{print $NF}' | awk -F. '{print $NR}')
+    if [ -z $last_sequence_number ]; then
+        last_sequence_number="0"
+    fi
 
-	new_file_sequence_number=`expr ${last_file_sequence_number} + 1`
-	new_file_name=`printf "${crashlog_path}/crashlog_%05d\n" $new_file_sequence_number`
-	echo "****** Wake Source is [ ${wakesrc} ] ******" > ${new_file_name}
+    new_sequence_number=$(expr ${last_sequence_number} + 1)
+    new_name=$(printf "crashlog_%05d" $new_sequence_number)
 
-	if [ -e ${ipanic_console_path} ]; then
-		# we got an epanic trace - standard case
-		cat ${ipanic_console_path} >> ${new_file_name}
-		echo clear > ${ipanic_console_path}
-	fi
+    # create working directory
+    mkdir ${crashlog_path}/${new_name}
+
+    # write crashfile
+    crashfile_path=${crashlog_path}/${new_name}/crashfile
+
+    event="CRASH"
+    manufacturer="Intel Corporation"
+    product_name=$(cat /factory/hardware_model)
+    version=$(cat /factory/hardware_version)
+    serial_number=$(cat /factory/serial_number)
+    linux_version=$(uname -a)
+    build_version=$(cat /etc/version)
+    date=$(date)
+
+    echo "EVENT=${event}" > ${crashfile_path}
+    echo "Manufacturer : ${manufacturer}" >> ${crashfile_path}
+    echo "Product name : ${product_name}" >> ${crashfile_path}
+    echo "Version : ${version}" >> ${crashfile_path}
+    echo "Serial Number : ${serial_number}" >> ${crashfile_path}
+    echo "Linux version : ${linux_version}" >> ${crashfile_path}
+    echo "Build version : ${build_version}" >> ${crashfile_path}
+    echo "Date : ${date}" >> ${crashfile_path}
+    echo -e "Wake source : ${wakesrc}" >> ${crashfile_path}
+
+    # write full journal binary & logs from previous boot
+    journalctl -b -1 -o short-monotonic > ${crashlog_path}/${new_name}/journal_logs
+    journalctl -b -1 -o export > ${crashlog_path}/${new_name}/journal_binary
+
+    # write panic trace
+    if [ -e ${ipanic_console_path} ]; then
+        cat ${ipanic_console_path} > ${crashlog_path}/${new_name}/panic
+        echo clear > ${ipanic_console_path}
+    fi
+
+    # create archive and clear folder
+    tar -zcf ${crashlog_path}/${new_name}.tar.gz -C ${crashlog_path} ${new_name}
+    rm -rf ${crashlog_path}/${new_name}
+
 fi
 
