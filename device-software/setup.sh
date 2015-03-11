@@ -113,6 +113,7 @@ function usage()
   echo -e "\t--sdk_host=$my_sdk_host\t\tchoose host machine on which the generated SDK and cross compiler will be run. Must be one of [$all_sdk_hosts]"
   echo -e "\t-l --list_sdk_hosts\t\tlist availables sdk host supported machines"
   echo -e "\t--create_src_archive\t\twhen set, copies sources of all deployed packages into build/tmp/deploy/sources"
+  echo -e "\t--deb_packages\t\twhen set, use .deb package format instead of .ipk"
   echo ""
 }
 
@@ -125,6 +126,7 @@ main() {
   my_parallel_make=4
   my_build_name="Custom Edison build by $USER@$HOSTNAME "$(date +"%F %H:%M:%S %Z")
   all_sdk_hosts="linux32 linux64 win32 win64 macosx"
+  extra_package_type=""
 
   #probe my_sdk_host from uname
   plat=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -154,6 +156,9 @@ main() {
 ARCHIVER_MODE[src] = \"original\"
 COPYLEFT_LICENSE_INCLUDE = 'GPL* LGPL*'
 "
+        ;;
+      --deb_packages)
+        extra_package_type="PACKAGE_CLASSES = \"package_deb\""
         ;;
       --dl_dir)
         check_path
