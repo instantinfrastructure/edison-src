@@ -1,11 +1,16 @@
 DESCRIPTION = "Inter of Things communication library for device-to-device and device-to-cloud messaging"
 LICENSE = "MIT"
 
-S = "${EDISONREPO_TOP_DIR}/mw/iecf-js"
+PR = "r2"
+
+SRC_URI = "git://github.com/intel-iot-devkit/iotkit-comm-js.git;protocol=git"
+SRCREV = "5ccea56e88755c9f6e3cd37bb5fc5d747b8496aa"
 
 LIC_FILES_CHKSUM = " \
         file://COPYING;md5=e8db6501ed294e65418a933925d12058 \
 "
+
+S = "${WORKDIR}/git"
 
 DEPENDS = "nodejs-native zeromq mdns paho-mqtt"
 
@@ -35,7 +40,7 @@ do_compile () {
     npm cache clear
 
     # compile and install  node modules in source directory
-    npm --arch=${TARGET_ARCH} --production --verbose install
+    npm --arch=${TARGET_ARCH} --verbose install
 }
 
 do_install () {
@@ -50,12 +55,46 @@ do_install () {
     cp -r ${S}/doc ${D}${libdir}/node_modules/iotkit-comm/
     install -d ${D}${datadir}/iotkit-comm/examples/node
     cp -r ${S}/example/* ${D}${datadir}/iotkit-comm/examples/node
+
+    chmod 755 ${D}${libdir}/node_modules/iotkit-comm/lib/setup.js
+    install -d ${D}${bindir}
+    ln -s ../lib/node_modules/iotkit-comm/lib/setup.js ${D}${bindir}/iotkit-comm
 }
 
-INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"
 
-FILES_${PN} = "${libdir}/node_modules/ ${datadir}/iotkit-comm/examples"
-RDEPENDS_${PN} = "nodejs zeromq mdns paho-mqtt rsmb"
+PACKAGES = "${PN} ${PN}-test-dependencies"
 
-PACKAGES = "${PN}"
+FILES_${PN}-test-dependencies = " \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/istanbul \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/jsdoc \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/mocha \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/_mocha \
+        ${libdir}/node_modules/iotkit-comm/node_modules/chai/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/istanbul/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/jsdoc/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/mocha/ \
+"
+
+FILES_${PN} = " \
+        ${libdir}/node_modules/iotkit-comm/doc/ \
+        ${libdir}/node_modules/iotkit-comm/jsdoc-conf.json \
+        ${libdir}/node_modules/iotkit-comm/COPYING \
+        ${libdir}/node_modules/iotkit-comm/lib/ \
+        ${libdir}/node_modules/iotkit-comm/package.json \
+        ${libdir}/node_modules/iotkit-comm/README.md \
+        ${libdir}/node_modules/iotkit-comm/test \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/mqtt_pub \
+        ${libdir}/node_modules/iotkit-comm/node_modules/.bin/mqtt_sub \
+        ${libdir}/node_modules/iotkit-comm/node_modules/async/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/commander/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/mdns2/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/mqtt/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/read/ \
+        ${libdir}/node_modules/iotkit-comm/node_modules/zmq/ \
+        ${datadir}/iotkit-comm/examples/ \
+        ${bindir}/iotkit-comm \
+"
+
+RDEPENDS_${PN} = "nodejs zeromq mdns paho-mqtt mosquitto sshpass"
+RDEPENDS_${PN}-test-dependencies = "${PN}"
